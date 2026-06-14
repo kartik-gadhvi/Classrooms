@@ -215,6 +215,10 @@ public class BottomTutorialController : MonoBehaviour
         if (!IsSkipStep(currentStep))
             return;
 
+        // --- Logging: Nutzer hat einen Abschnitt übersprungen ---
+        if (SessionLogger.Instance != null)
+            SessionLogger.Instance.RegisterSkip(currentStep);
+
         if (currentStep == 4)
             currentStep = 17;
         else if (currentStep == 28)
@@ -457,6 +461,12 @@ public class BottomTutorialController : MonoBehaviour
             currentRadiusTaskDone = true;
             PlayTaskCompleteSound();
             RefreshCurrentText();
+
+            // --- Logging: Radius-Aufgabe geschafft ---
+            if (SessionLogger.Instance != null)
+                SessionLogger.Instance.MarkRadiusTaskCompleted();
+
+
         }
     }
 
@@ -516,6 +526,10 @@ public class BottomTutorialController : MonoBehaviour
             return;
 
         measurementsCompleted++;
+
+        // --- Logging: Tröpfchen erfolgreich zum Schweben gebracht ---
+        if (SessionLogger.Instance != null)
+            SessionLogger.Instance.MarkFloatTaskCompleted();
 
         if (measurementRecorder != null)
             measurementRecorder.RecordSelectedDrop(selectionManager);

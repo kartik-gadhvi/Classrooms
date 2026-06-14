@@ -28,6 +28,11 @@ public class OilDrop : MonoBehaviour
     public float electricResponsePower = 1.0f;
     public bool resetFieldRatioWhenOutside = true;
 
+    [Header("Float Logging")]
+    public bool logFloatToSessionLogger = true;
+    [Tooltip("Wie lange (Sekunden) das Tröpfchen ununterbrochen schweben muss, damit es als 'geschafft' zählt.")]
+    public float hoverHoldSecondsToCount = 0.5f;
+
     [Header("Collision")]
     public bool destroyOnCollision = false;
 
@@ -40,6 +45,9 @@ public class OilDrop : MonoBehaviour
 
     private float electricFieldRatio = 0f;
     private bool receivedFieldRatioThisFrame = false;
+
+    private float hoverHeldTime = 0f;
+    private bool floatCountedThisEpisode = false;
 
     private void Awake()
     {
@@ -76,6 +84,9 @@ public class OilDrop : MonoBehaviour
         electricFieldRatio = 0f;
         receivedFieldRatioThisFrame = false;
 
+        hoverHeldTime = 0f;
+        floatCountedThisEpisode = false;
+
         launchStartTime = Time.time;
         activeDrop = true;
 
@@ -91,6 +102,9 @@ public class OilDrop : MonoBehaviour
 
         electricFieldRatio = 0f;
         receivedFieldRatioThisFrame = false;
+
+        hoverHeldTime = 0f;
+        floatCountedThisEpisode = false;
 
         transform.position = startPosition;
         gameObject.SetActive(false);
@@ -141,9 +155,25 @@ public class OilDrop : MonoBehaviour
         if (Mathf.Abs(ratio - 1f) <= hoverDeadZone)
         {
             verticalSpeed = 0f;
+
+            // --- Schwebe-Erkennung fürs Logging ---
+            hoverHeldTime += Time.fixedDeltaTime;
+
+            if (logFloatToSessionLogger && !floatCountedThisEpisode &&
+                hoverHeldTime >= hoverHoldSecondsToCount)
+            {
+                floatCountedThisEpisode = true;
+
+                if (SessionLogger.Instance != null)
+                    SessionLogger.Instance.MarkFloatTaskCompleted();
+            }
         }
         else
         {
+            // Schwebe-Episode beendet -> wieder scharf schalten
+            hoverHeldTime = 0f;
+            floatCountedThisEpisode = false;
+
             float signedFactor = 1f - ratio;
             float magnitude = Mathf.Pow(
                 Mathf.Abs(signedFactor),

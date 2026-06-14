@@ -30,6 +30,9 @@ public class RadiusSliderController : MonoBehaviour
     public bool enableTutorialRadiusModeOnStart = false;
     public bool hidePanelOnStart = false;
 
+    [Header("Logging")]
+    public bool logRadiusTaskToSessionLogger = true;
+
     private bool isActiveForTask;
     private RectTransform sliderRect;
     private float lastAppliedRadius = -999f;
@@ -105,6 +108,10 @@ public class RadiusSliderController : MonoBehaviour
 
         if (panelRoot != null && hidePanelOnStart)
             panelRoot.SetActive(false);
+
+        // --- Logging: Radius-Aufgabe abgeschlossen ---
+        if (logRadiusTaskToSessionLogger && SessionLogger.Instance != null)
+            SessionLogger.Instance.MarkRadiusTaskCompleted();
     }
 
     public float GetCurrentRadiusMicrometer()

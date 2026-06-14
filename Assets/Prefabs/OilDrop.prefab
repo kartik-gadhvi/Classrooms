@@ -165,6 +165,8 @@ MonoBehaviour:
   hoverDeadZone: 0.03
   electricResponsePower: 1
   resetFieldRatioWhenOutside: 1
+  logFloatToSessionLogger: 0
+  hoverHoldSecondsToCount: 0.5
   destroyOnCollision: 0
 --- !u!114 &5350693255552433801
 MonoBehaviour:
