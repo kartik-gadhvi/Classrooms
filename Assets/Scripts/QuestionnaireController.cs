@@ -77,6 +77,8 @@ public class QuestionnaireController : MonoBehaviour
     [Header("Events")]
     public bool logResultToConsole = true;
 
+    public const int Unanswered = int.MinValue;
+
     /// <summary>Wird ausgelöst, wenn alle Fragebögen beantwortet sind. Antworten in Run-Reihenfolge.</summary>
     public event Action<IReadOnlyList<int>> OnFinished;
 
@@ -145,7 +147,7 @@ public class QuestionnaireController : MonoBehaviour
 
         answers.Clear();
         for (int i = 0; i < runOrder.Count; i++)
-            answers.Add(-1);
+            answers.Add(Unanswered);
 
         currentRun = 0;
         ShowCurrent();
@@ -223,7 +225,7 @@ public class QuestionnaireController : MonoBehaviour
         }
 
         // Falls die Frage schon einmal beantwortet wurde (Zurück-Navigation o. Ä.)
-        if (answers[currentRun] != -1)
+        if (answers[currentRun] != Unanswered)
         {
             int idx = answers[currentRun] - item.startValue;
             if (idx >= 0 && idx < activeToggles.Count)
@@ -252,14 +254,14 @@ public class QuestionnaireController : MonoBehaviour
             return;
 
         if (requireAnswerBeforeContinue)
-            continueButton.interactable = answers[currentRun] != -1;
+            continueButton.interactable = answers[currentRun] != Unanswered;
         else
             continueButton.interactable = true;
     }
 
     private void OnContinuePressed()
     {
-        if (requireAnswerBeforeContinue && answers[currentRun] == -1)
+        if (requireAnswerBeforeContinue && answers[currentRun] == Unanswered)
             return;
 
         currentRun++;
