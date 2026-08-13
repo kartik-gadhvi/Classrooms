@@ -52,6 +52,7 @@ public class BottomTutorialController : MonoBehaviour
     [Header("Voice")]
     public AudioSource voiceSource;
     public AudioClip[] stepVoiceClips;
+    public AudioClip[] stepVoiceClipsEnglish;
     public bool stopVoiceWhenStepChanges = true;
 
     [Header("Sounds")]
@@ -64,6 +65,15 @@ public class BottomTutorialController : MonoBehaviour
     public Behaviour[] componentsToDisableDuringTutorial;
 
     public static bool TutorialInputLocked { get; private set; }
+
+    public bool IsTutorialSessionActive => tutorialSessionActive;
+    public int CurrentStep => currentStep;
+    public int MeasurementsCompleted => measurementsCompleted;
+    public int RequiredFloatingDroplets => requiredFloatingDroplets;
+
+    public event System.Action SessionStarted;
+    public event System.Action SessionEnded;
+    public event System.Action<int> StepShown;
 
     private bool tutorialSessionActive;
     private int currentStep;
@@ -99,6 +109,22 @@ public class BottomTutorialController : MonoBehaviour
 
         if (dialogueRoot != null)
             dialogueRoot.SetActive(false);
+
+        LanguageManager.Changed += OnLanguageChanged;
+    }
+
+    private void OnDestroy()
+    {
+        LanguageManager.Changed -= OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged(AppLanguage language)
+    {
+        if (!tutorialSessionActive)
+            return;
+
+        RefreshCurrentText();
+        RefreshGuideForCurrentStep();
     }
 
     private void Update()
@@ -136,6 +162,7 @@ public class BottomTutorialController : MonoBehaviour
             dialogueRoot.SetActive(true);
 
         ShowStep();
+        SessionStarted?.Invoke();
     }
 
     private void EndTutorialSession()
@@ -154,6 +181,8 @@ public class BottomTutorialController : MonoBehaviour
 
         ReturnToStoryStart();
         StartPostQuiz();
+
+        SessionEnded?.Invoke();
 
         ResetTutorialProgress();
     }
@@ -255,6 +284,7 @@ public class BottomTutorialController : MonoBehaviour
         RefreshCurrentText();
         UpdateArrowForStep(currentStep);
         PlayVoiceForCurrentStep();
+        StepShown?.Invoke(currentStep);
     }
 
     private void RefreshCurrentText()
@@ -264,6 +294,38 @@ public class BottomTutorialController : MonoBehaviour
 
         if (buttonHintText != null)
             buttonHintText.text = GetButtonHintForCurrentStep();
+    }
+
+    private void RefreshGuideForCurrentStep()
+    {
+        int step = currentStep;
+
+        if (step == 17)
+            ShowGuideUI(ExperimentStrings.GuideSprayer());
+        else if (step == 22)
+            ShowGuideUI(ExperimentStrings.GuideGravityFormula());
+        else if (step == 23 || step == 24)
+            ShowGuideUI(ExperimentStrings.GuideRadiusSlider());
+        else if (step == 25)
+            ShowGuideUI(ExperimentStrings.GuideRadiusTask("0.5", ExperimentStrings.RadiusLabel(0)));
+        else if (step == 26)
+            ShowGuideUI(ExperimentStrings.GuideRadiusTask("1.0", ExperimentStrings.RadiusLabel(1)));
+        else if (step == 27)
+            ShowGuideUI(ExperimentStrings.GuideRadiusTask("1.5", ExperimentStrings.RadiusLabel(2)));
+        else if (step == 33)
+            ShowGuideUI(ExperimentStrings.GuideMeasurementSpray());
+        else if (step == 34)
+            ShowGuideUI(ExperimentStrings.GuideMeasurementSelect());
+        else if (step == 35)
+            ShowGuideUI(ExperimentStrings.GuideVoltageTask());
+        else if (step == 37 || step == 38)
+            ShowGuideUI(ExperimentStrings.GuideElectricFormula());
+        else if (step == 39)
+            ShowGuideUI(ExperimentStrings.GuideParameterExplanation());
+        else if (step >= 41 && step <= 46)
+            ShowGuideUI(ExperimentStrings.GuideHistogram());
+        else if (step >= 48 && step <= 57)
+            ShowGuideUI(ExperimentStrings.GuideNotebook());
     }
 
     private bool IsBlockingStep(int step)
@@ -291,11 +353,11 @@ public class BottomTutorialController : MonoBehaviour
                 if (spraySpawner != null)
                     spraySpawner.ReturnToRandomModeAndClearDrops();
 
-                ShowGuideUI(GetGuideSprayer());
+                ShowGuideUI(ExperimentStrings.GuideSprayer());
                 break;
 
             case 22:
-                ShowGuideUI(GetGuideGravityFormula());
+                ShowGuideUI(ExperimentStrings.GuideGravityFormula());
                 break;
 
             case 23:
@@ -307,26 +369,26 @@ public class BottomTutorialController : MonoBehaviour
                 if (spraySpawner != null)
                     spraySpawner.EnableTutorialRadiusMode();
 
-                ShowGuideUI(GetGuideRadiusSlider());
+                ShowGuideUI(ExperimentStrings.GuideRadiusSlider());
                 break;
 
             case 24:
-                ShowGuideUI(GetGuideRadiusSlider());
+                ShowGuideUI(ExperimentStrings.GuideRadiusSlider());
                 break;
 
             case 25:
                 StartRadiusTask(0);
-                ShowGuideUI(GetGuideRadiusTask("0.5", "sehr langsam fallend"));
+                ShowGuideUI(ExperimentStrings.GuideRadiusTask("0.5", ExperimentStrings.RadiusLabel(0)));
                 break;
 
             case 26:
                 StartRadiusTask(1);
-                ShowGuideUI(GetGuideRadiusTask("1.0", "mittlere Geschwindigkeit"));
+                ShowGuideUI(ExperimentStrings.GuideRadiusTask("1.0", ExperimentStrings.RadiusLabel(1)));
                 break;
 
             case 27:
                 StartRadiusTask(2);
-                ShowGuideUI(GetGuideRadiusTask("1.5", "schnell fallend"));
+                ShowGuideUI(ExperimentStrings.GuideRadiusTask("1.5", ExperimentStrings.RadiusLabel(2)));
                 break;
 
             case 28:
@@ -341,28 +403,28 @@ public class BottomTutorialController : MonoBehaviour
 
             case 33:
                 StartNewMeasurement();
-                ShowGuideUI(GetGuideMeasurementSpray());
+                ShowGuideUI(ExperimentStrings.GuideMeasurementSpray());
                 break;
 
             case 34:
                 SetSelectionInteraction(true);
-                ShowGuideUI(GetGuideMeasurementSelect());
+                ShowGuideUI(ExperimentStrings.GuideMeasurementSelect());
                 break;
 
             case 35:
                 SetVoltageInteraction(true);
                 ShowForceArrows();
-                ShowGuideUI(GetGuideVoltageTask());
+                ShowGuideUI(ExperimentStrings.GuideVoltageTask());
                 break;
 
             case 37:
             case 38:
                 ShowForceArrows();
-                ShowGuideUI(GetGuideElectricFormula());
+                ShowGuideUI(ExperimentStrings.GuideElectricFormula());
                 break;
 
             case 39:
-                ShowGuideUI(GetGuideParameterExplanation());
+                ShowGuideUI(ExperimentStrings.GuideParameterExplanation());
                 break;
 
             case 41:
@@ -401,7 +463,7 @@ public class BottomTutorialController : MonoBehaviour
             case 55:
             case 56:
             case 57:
-                ShowGuideUI(GetGuideNotebook());
+                ShowGuideUI(ExperimentStrings.GuideNotebook());
                 break;
 
             case 58:
@@ -564,19 +626,39 @@ public class BottomTutorialController : MonoBehaviour
         if (stopVoiceWhenStepChanges)
             voiceSource.Stop();
 
-        if (stepVoiceClips == null)
-            return;
-
-        if (currentStep < 0 || currentStep >= stepVoiceClips.Length)
-            return;
-
-        AudioClip clip = stepVoiceClips[currentStep];
-
+        AudioClip clip = GetVoiceClipForCurrentStep();
         if (clip == null)
             return;
 
         voiceSource.clip = clip;
         voiceSource.Play();
+    }
+
+    public void PauseNarration()
+    {
+        StopVoice();
+    }
+
+    public string GetCurrentDialogueText()
+    {
+        return GetDialogueForCurrentStep();
+    }
+
+    private AudioClip GetVoiceClipForCurrentStep()
+    {
+        AudioClip english = GetClip(stepVoiceClipsEnglish, currentStep);
+        if (LanguageManager.IsEnglish && english != null)
+            return english;
+
+        return GetClip(stepVoiceClips, currentStep);
+    }
+
+    private static AudioClip GetClip(AudioClip[] clips, int index)
+    {
+        if (clips == null || index < 0 || index >= clips.Length)
+            return null;
+
+        return clips[index];
     }
 
     private void StopVoice()
@@ -587,313 +669,18 @@ public class BottomTutorialController : MonoBehaviour
 
     private string GetDialogueForCurrentStep()
     {
-        switch (currentStep)
-        {
-            case 0:
-                return "Ah. Ein Klassenzimmer. Gut. Das kenne ich.\nMein Name ist Robert Andrews Millikan.\nIch war Physikprofessor in Chicago und später am California Institute of Technology.";
-
-            case 1:
-                return "Ich habe eine Frage — und ich brauche jemanden, der mir hilft.\nIst elektrische Ladung unteilbar?";
-
-            case 2:
-                return "Gibt es ein kleinstes elektrisches Paket?\nOder fließt Elektrizität kontinuierlich, wie Wasser durch einen Schlauch?";
-
-            case 3:
-                return "Ich habe ein Experiment gebaut, das diese Frage beantworten kann.\nAber ich kann es nicht alleine durchführen.\nDazu brauche ich einen Assistenten — wie dich.";
-
-            case 4:
-                return "Ausgezeichnet. Dann legen wir los.\nKomm zum Experiment — ich zeige dir, womit wir es zu tun haben.";
-
-            case 5:
-                return "Ich bin 1868 in Morrison, Illinois geboren.\nPhysik hat mich schon immer fasziniert:\nWas ist Materie? Was ist Elektrizität?";
-
-            case 6:
-                return "1909 haben Harvey Fletcher und ich begonnen,\ndiesen Apparat zu entwickeln.";
-
-            case 7:
-                return "Fletcher hatte die entscheidende Idee:\nStatt Wasser verwenden wir Öl.\nÖltröpfchen bleiben viel länger stabil.";
-
-            case 8:
-                return "J. J. Thomson hatte gezeigt, dass es Elektronen gibt.\nAber wie groß ist ihre Ladung?\nGenau das wollte ich messen.";
-
-            case 9:
-                return "Heute erfährst du,\nwie dieses Experiment funktioniert\nund wie man damit die Elementarladung bestimmt.";
-
-            case 10:
-                return "Hier ist mein Apparat.\nFünf Dinge arbeiten zusammen.\nIch erkläre dir jede Komponente.";
-
-            case 11:
-                return "Der Zerstäuber ist der Anfang.\nEr erzeugt viele kleine Öltröpfchen.\nDurch Reibung werden einige davon elektrisch geladen.";
-
-            case 12:
-                return "Die Tröpfchen sind sehr klein.\nDas Mikroskop macht sie sichtbar.\nAber es spiegelt das Bild.";
-
-            case 13:
-                return "In dieser Simulation sehen wir direkt,\nob die Öltröpfchen sinken oder steigen.";
-
-            case 14:
-                return "Das Licht kommt von der Seite.\nDie Tröpfchen streuen das Licht\nund werden dadurch sichtbar.";
-
-            case 15:
-                return "Das Herzstück sind zwei Metallplatten.\nSie sind 6 Millimeter voneinander entfernt.\nZwischen ihnen entsteht ein elektrisches Feld.";
-
-            case 16:
-                return "Mit dem Spannungsregler veränderst du das Feld.\nWenn die Spannung steigt,\nwird die elektrische Kraft stärker.";
-
-            case 17:
-                return "Aufgabe: Zerstäuber benutzen\n\nZiele mit dem rechten Controller auf den Zerstäuber.\nDrücke den rechten Trigger, um Öltröpfchen zu erzeugen.";
-
-            case 18:
-                return "Die Tröpfchen fallen.\nLangsam — aber sie fallen.\nDie Schwerkraft zieht sie nach unten.";
-
-            case 19:
-                return "Aus der Fallgeschwindigkeit können wir den Radius r bestimmen.\nGrößere Tröpfchen fallen schneller.";
-
-            case 20:
-                return "Die Dichte des Öls kennen wir.\nDie Erdbeschleunigung kennen wir auch.\nWas fehlt, ist der Radius.";
-
-            case 21:
-                return "Den Radius messen wir aus der Fallbewegung.\nDas ist der erste wichtige Schritt.";
-
-            case 22:
-                return "Schau auf die Formel im GuideUI.\nDort siehst du die bekannten Werte.";
-
-            case 23:
-                return "Ein Slider erscheint.\nEr steuert die Tröpfchengröße r.\nLinks: 0.3 µm. Rechts: 2.0 µm.";
-
-            case 24:
-                return "Bewege den Slider.\nKleinere Tröpfchen fallen langsamer.\nGrößere Tröpfchen fallen schneller.";
-
-            case 25:
-                return GetRadiusTaskText("0.5", "sehr langsam fallend");
-
-            case 26:
-                return GetRadiusTaskText("1.0", "mittlere Geschwindigkeit");
-
-            case 27:
-                return GetRadiusTaskText("1.5", "schnell fallend");
-
-            case 28:
-                return "Gut. Du siehst jetzt:\nDer Radius bestimmt die Fallgeschwindigkeit.\nJetzt kommt der eigentliche Messschritt.";
-
-            case 29:
-                return "Nun betrachten wir das elektrische Feld.\nWenn die Spannung steigt,\nwirkt eine elektrische Kraft auf das geladene Tröpfchen.";
-
-            case 30:
-                return "Diese Kraft heißt Coulomb-Kraft.\nJe höher die Spannung,\ndesto stärker wird sie.";
-
-            case 31:
-                return "Der grüne Pfeil zeigt die elektrische Kraft.\nWenn die Spannung steigt,\nwächst dieser Pfeil.";
-
-            case 32:
-                return "Wenn die Spannung passend ist,\nkann das Tröpfchen schweben.\nDann gleichen sich die Kräfte aus.";
-
-            case 33:
-                return "Aufgabe: Neues Öltröpfchen erzeugen\n\nZiele mit dem rechten Controller auf den Zerstäuber.\nDrücke den rechten Trigger.\n\nMessung: " + measurementsCompleted + "/" + requiredFloatingDroplets;
-
-            case 34:
-                return "Aufgabe: Öltröpfchen auswählen\n\nZiele mit dem roten Strahl des rechten Controllers auf ein Tröpfchen.\nDrücke den rechten Trigger.\n\nMessung: " + measurementsCompleted + "/" + requiredFloatingDroplets;
-
-            case 35:
-                return "Aufgabe: Tröpfchen zum Schweben bringen\n\nGreife den Spannungsregler mit dem linken Controller.\nBewege die Hand langsam nach links oder rechts,\nbis das Tröpfchen weder deutlich steigt noch fällt.\n\nMessung: " + measurementsCompleted + "/" + requiredFloatingDroplets;
-
-            case 36:
-                return "Das war deine erste Ladungsmessung.\nAber eine Messung ist nur ein Datenpunkt.\nWir brauchen ein Muster.";
-
-            case 37:
-                return "Schau auf das GuideUI.\nDort siehst du das Kräftegleichgewicht.";
-
-            case 38:
-                return "Wenn das Tröpfchen schwebt,\nist die elektrische Kraft gleich der Gewichtskraft.\nDamit berechnen wir die Ladung q.";
-
-            case 39:
-                return "Auf dem Parameterpanel siehst du die Größen,\ndie wir für die Berechnung brauchen.";
-
-            case 40:
-                return "Wir brauchen mehrere Datenpunkte.\nBringe noch vier weitere Tröpfchen nacheinander zum Schweben.";
-
-            case 41:
-                return "Alle fünf Messungen sind abgeschlossen.\nSchau dir nun das Histogramm an.";
-
-            case 42:
-                return "Ich habe nicht nur ein Tröpfchen gemessen.\nIch habe viele gemessen — über Monate.";
-
-            case 43:
-                return "Die Ladungen waren nicht zufällig verteilt.\nSie lagen immer nahe bei denselben Werten.";
-
-            case 44:
-                return "Diese Werte sind Vielfache einer kleinsten Einheit.\nDas ist die Elementarladung e.";
-
-            case 45:
-                return "Deine Messwerte zeigen dasselbe Muster:\nDie Ladungen häufen sich bei ganzzahligen Vielfachen.";
-
-            case 46:
-                return "Das ist Ladungsquantisierung.\nElektrische Ladung kommt in Paketen.";
-
-            case 47:
-                return "Ich muss dir etwas zeigen.\n1978 entdeckte Gerald Holton meine Original-Notizbücher.";
-
-            case 48:
-                return "Er fand heraus,\ndass ich mehr Tröpfchen gemessen hatte,\nals ich veröffentlicht habe.";
-
-            case 49:
-                return "Neben manchen Datenpunkten standen Anmerkungen:\n'Won't work', 'Schiefe Messung', 'Error — discard'.";
-
-            case 50:
-                return "War das falsch?\nIch glaube: Nein.\nIch habe Messungen mit technischen Fehlern ausgeschlossen.";
-
-            case 51:
-                return "Das ist kein Betrug.\nDas ist Urteilsvermögen.";
-
-            case 52:
-                return "Allan Franklin zeigte 1981:\nDie weggelassenen Daten hätten den Endwert kaum verändert.";
-
-            case 53:
-                return "Die statistische Unsicherheit wäre größer geworden,\naber das Ergebnis wäre fast gleich geblieben.";
-
-            case 54:
-                return "Die Selektion verbesserte die Präzision,\naber nicht das Ergebnis.";
-
-            case 55:
-                return "Datenselektion beschäftigt Wissenschaftler bis heute.\nEine klare Anforderung bleibt: Transparenz.";
-
-            case 56:
-                return "Was ausgeschlossen wird — und warum —\nmuss dokumentiert sein.";
-
-            case 57:
-                return "Damit hast du gesehen:\nNicht nur der Messwert zählt,\nsondern auch der Umgang mit Daten.";
-
-            case 58:
-                return "1913 veröffentlichte ich meinen Endwert:\ne = 1.592 * 10^-19 Coulomb.\nUnsicherheit: 0.2 Prozent.";
-
-            case 59:
-                return "Das war damals die genaueste Messung der Elementarladung.\nDer heutige Wert ist 1.602 * 10^-19 Coulomb.";
-
-            case 60:
-                return "Die Abweichung lag an einem leicht falschen Wert\nfür die Luftviskosität.\nNicht an der Methode.";
-
-            case 61:
-                return "Der eigentliche Beitrag ist nicht nur die Zahl.\nEs ist das Prinzip:\nElektrische Ladung ist gequantelt.";
-
-            case 62:
-                return "Es gibt keine halbe Elementarladung.\nKeine viertel Elementarladung.\nDie Natur zählt in ganzen Zahlen.";
-
-            case 63:
-                return "Das ist eine fundamentale Struktur der Materie.";
-
-            case 64:
-                return "Seit 1995 wurden über hundert Millionen Öltropfen vermessen.\nEs gab keinen Hinweis auf Bruchladungen.";
-
-            case 65:
-                return "Auch deine Messungen zeigen dieses Muster:\nLadungen treten als Vielfache von e auf.";
-
-            case 66:
-                return "Danke für deine Hilfe.\nJetzt folgt derselbe Wissenstest noch einmal.\nDieses Mal bekommst du Feedback zu deinen Antworten.";
-
-            default:
-                return "";
-        }
-    }
-
-    private string GetRadiusTaskText(string target, string label)
-    {
-        if (currentRadiusTaskDone)
-        {
-            return "Aufgabe abgeschlossen:\n\n" +
-                   "<b><color=#00AA00>r = " + target + " µm → " + label + "</color></b>\n\n" +
-                   "Drücke A, um fortzufahren.";
-        }
-
-        return "Aufgabe:\n\n" +
-               "r = " + target + " µm → " + label + "\n\n" +
-               "Stelle den Radius mit dem linken Controller ein.\n" +
-               "Benutze den linken Trigger am Slider.\n" +
-               "Erzeuge danach Öltröpfchen mit dem rechten Trigger am Zerstäuber.";
+        return ExperimentStrings.Dialogue(currentStep, measurementsCompleted, requiredFloatingDroplets, currentRadiusTaskDone);
     }
 
     private string GetButtonHintForCurrentStep()
     {
-        if (currentStep == 3)
-            return "A: Ja, ich helfe dir!";
-
-        if (IsSkipStep(currentStep))
-            return "A: Weiter    B: Abschnitt überspringen";
-
-        if (IsBlockingStep(currentStep))
-            return "";
-
-        if ((currentStep == 25 || currentStep == 26 || currentStep == 27) && !currentRadiusTaskDone)
-            return "";
-
-        return "A: Weiter";
-    }
-
-    private string GetGuideSprayer()
-    {
-        return "Zerstäuber\n\nController: rechter Controller\nTaste: rechter Trigger\nAktion: Öltröpfchen erzeugen";
-    }
-
-    private string GetGuideGravityFormula()
-    {
-        return "Schwerkraft und Radius\n\nF_G = m * g\nm = ρ_Öl * (4/3) * π * r^3\n\nρ_Öl = 875 kg/m^3\ng = 9.81 m/s^2";
-    }
-
-    private string GetGuideRadiusSlider()
-    {
-        return "Tröpfchengröße r\n\nSlider: 0.3 µm bis 2.0 µm\n\nController: linker Controller\nTaste: linker Trigger am Slider\nAktion: Radius-Slider bewegen";
-    }
-
-    private string GetGuideRadiusTask(string target, string label)
-    {
-        return "Radius-Aufgabe\n\nZiel: r = " + target + " µm\n" + label +
-               "\n\n1. Linker Trigger: Slider halten\n2. Rechter Trigger: Öltröpfchen erzeugen\n3. Tropfen muss in den Kondensator gelangen.";
-    }
-
-    private string GetGuideMeasurementSpray()
-    {
-        return "Messung starten\n\nController: rechter Controller\nTaste: rechter Trigger\nAktion: Öltröpfchen erzeugen";
-    }
-
-    private string GetGuideMeasurementSelect()
-    {
-        return "Tröpfchen auswählen\n\nController: rechter Controller\nTaste: rechter Trigger\nAktion: Mit dem roten Strahl ein Öltröpfchen auswählen.";
-    }
-
-    private string GetGuideVoltageTask()
-    {
-        return "Schwebezustand\n\nController: linker Controller\nTaste: mittlere Griff-Taste\nAktion: Hand langsam nach links oder rechts bewegen\nFeineinstellung: zusätzlich X-Taste gedrückt halten\n\nZiel: Tröpfchen soll weder steigen noch fallen.";
-    }
-
-    private string GetGuideElectricFormula()
-    {
-        return "Kräftegleichgewicht\n\nF_el = F_G\nF_el = q * E\nE = U / d\nq = m * g * d / U";
-    }
-
-    private string GetGuideParameterExplanation()
-    {
-        return "Messgrößen\n\nq = Ladung [C]\nU = Spannung [V]\nd = 6.00 mm\nm = Masse [kg]\ng = 9.81 m/s^2\nE = U / d";
-    }
-
-    private string GetGuideNotebook()
-    {
-        return "Millikan Notebook 1911\n\n" +
-               "#47 q = 1.613 * 10^-19 C OK\n" +
-               "#48 q = 1.21 * 10^-19 C Won't work\n" +
-               "#49 q = 3.204 * 10^-19 C x2 OK\n" +
-               "#50 q = 0.94 * 10^-19 C Schiefe Messung\n" +
-               "#51 q = 4.836 * 10^-19 C x3 OK\n" +
-               "#52 Tropfen verloren Error discard\n" +
-               "#53 q = 1.598 * 10^-19 C OK";
-    }
-
-    private string GetGuideHistogramText()
-    {
-        return "Ladungsverteilung\n\nDie Balken zeigen, bei welchen Vielfachen von e deine Messwerte liegen.";
+        bool radiusIncomplete = (currentStep == 25 || currentStep == 26 || currentStep == 27) && !currentRadiusTaskDone;
+        return ExperimentStrings.ButtonHint(currentStep, IsSkipStep(currentStep), IsBlockingStep(currentStep), radiusIncomplete);
     }
 
     private void ShowHistogramGuide()
     {
-        ShowGuideUI(GetGuideHistogramText());
+        ShowGuideUI(ExperimentStrings.GuideHistogram());
 
         if (histogramPanel != null)
             histogramPanel.Show();

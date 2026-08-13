@@ -56,6 +56,7 @@ public class LegendUIController : MonoBehaviour
         if (selectionManager != null)
             selectionManager.OnSelectionChanged += HandleSelectionChanged;
 
+        LanguageManager.Changed += OnLanguageChanged;
         CacheBaseStyle();
         RefreshAll();
     }
@@ -64,6 +65,13 @@ public class LegendUIController : MonoBehaviour
     {
         if (selectionManager != null)
             selectionManager.OnSelectionChanged -= HandleSelectionChanged;
+
+        LanguageManager.Changed -= OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged(AppLanguage language)
+    {
+        RefreshAll();
     }
 
     private void Update()
@@ -97,10 +105,10 @@ public class LegendUIController : MonoBehaviour
 
         if (selected == null)
         {
-            if (titleText != null) titleText.text = "Drop--";
-            if (massText != null) massText.text = "Mass: --";
-            if (chargeText != null) chargeText.text = "Charge: --";
-            if (radiusText != null) radiusText.text = "Radius: --";
+            if (titleText != null) titleText.text = ExperimentStrings.LegendDropNone;
+            if (massText != null) massText.text = ExperimentStrings.LegendMass("--");
+            if (chargeText != null) chargeText.text = ExperimentStrings.LegendCharge("--");
+            if (radiusText != null) radiusText.text = ExperimentStrings.LegendRadius("--");
             if (hintText != null) hintText.text = "";
 
             RestoreStyle();
@@ -111,24 +119,24 @@ public class LegendUIController : MonoBehaviour
         DropProperties dp = FindDropProperties(selected);
 
         if (titleText != null)
-            titleText.text = "Drop" + GetDisplayId(selected).ToString("00");
+            titleText.text = ExperimentStrings.LegendDrop(GetDisplayId(selected));
 
         if (dp != null)
         {
             if (massText != null)
-                massText.text = "Mass: " + (dp.MassKg * 1e15f).ToString("0.000") + " pg";
+                massText.text = ExperimentStrings.LegendMass((dp.MassKg * 1e15f).ToString("0.000") + " pg");
 
             if (chargeText != null)
-                chargeText.text = "Charge: " + dp.ChargeMultiple + " e";
+                chargeText.text = ExperimentStrings.LegendCharge(dp.ChargeMultiple + " e");
 
             if (radiusText != null)
-                radiusText.text = "Radius: " + dp.RadiusMicrometer.ToString("0.00") + " µm";
+                radiusText.text = ExperimentStrings.LegendRadius(dp.RadiusMicrometer.ToString("0.00") + " µm");
         }
         else
         {
-            if (massText != null) massText.text = "Mass: --";
-            if (chargeText != null) chargeText.text = "Charge: --";
-            if (radiusText != null) radiusText.text = "Radius: --";
+            if (massText != null) massText.text = ExperimentStrings.LegendMass("--");
+            if (chargeText != null) chargeText.text = ExperimentStrings.LegendCharge("--");
+            if (radiusText != null) radiusText.text = ExperimentStrings.LegendRadius("--");
         }
 
         RestoreStyle();
@@ -153,8 +161,8 @@ public class LegendUIController : MonoBehaviour
         if (voltageText != null)
         {
             voltageText.text = voltageSource != null
-                ? "Voltage: " + currentRounded.ToString("0.0") + " V"
-                : "Voltage: --";
+                ? ExperimentStrings.LegendVoltage(currentRounded.ToString("0.0") + " V")
+                : ExperimentStrings.LegendVoltage("--");
         }
 
         bool correct =
@@ -204,11 +212,11 @@ public class LegendUIController : MonoBehaviour
             if (!canCalculate || voltageSource == null)
                 hintText.text = "";
             else if (currentRounded > hoverRounded + toleranceV)
-                hintText.text = "Status: Steigt";
+                hintText.text = ExperimentStrings.LegendStatusRising;
             else if (currentRounded < hoverRounded - toleranceV)
-                hintText.text = "Status: Fällt";
+                hintText.text = ExperimentStrings.LegendStatusFalling;
             else
-                hintText.text = "Status: Schwebt";
+                hintText.text = ExperimentStrings.LegendStatusHovering;
         }
     }
 

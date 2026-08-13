@@ -5,11 +5,11 @@ using System.Text;
 using UnityEngine;
 
 /// <summary>
-/// Zentrales Logging für einen Studien-Durchlauf.
+/// Zentrales Logging fï¿½r einen Studien-Durchlauf.
 /// Schreibt EINE CSV-Datei mit fester Kopfzeile und genau einer Datenzeile.
 /// Dateiname = Anwendungsname + Datum + Uhrzeit (ein Durchlauf = eine Datei).
 ///
-/// Pre-Test, Post-Test und Fragebögen werden automatisch aus den vorhandenen
+/// Pre-Test, Post-Test und Fragebï¿½gen werden automatisch aus den vorhandenen
 /// Controllern gelesen. Skip und die beiden Aufgaben-Erfolge werden vom
 /// BottomTutorialController gemeldet:
 ///   SessionLogger.Instance.RegisterSkip(currentStep);
@@ -46,7 +46,7 @@ public class SessionLogger : MonoBehaviour
     private string sessionStart;
     private string appName;
 
-    // Caches (überleben auch, falls eine Referenz beim Szenenwechsel null wird)
+    // Caches (ï¿½berleben auch, falls eine Referenz beim Szenenwechsel null wird)
     private readonly List<string> questionnaireIds = new List<string>();
     private List<int> cachedPre = new List<int>();
     private List<int> cachedPost = new List<int>();
@@ -58,6 +58,7 @@ public class SessionLogger : MonoBehaviour
     private readonly List<int> skippedSections = new List<int>();
     private readonly List<string> radiusTimestamps = new List<string>();
     private readonly List<string> floatTimestamps = new List<string>();
+    private string languageCode = "";
 
     private void Awake()
     {
@@ -103,10 +104,10 @@ public class SessionLogger : MonoBehaviour
     }
 
     // ---------------------------------------------------------------------
-    //  Öffentliche Hooks (aus deinen Skripten aufrufen)
+    //  ï¿½ffentliche Hooks (aus deinen Skripten aufrufen)
     // ---------------------------------------------------------------------
 
-    /// <summary>Aufrufen, wenn der Nutzer einen Abschnitt überspringt. Der Schritt wird mitgeloggt.</summary>
+    /// <summary>Aufrufen, wenn der Nutzer einen Abschnitt ï¿½berspringt. Der Schritt wird mitgeloggt.</summary>
     public void RegisterSkip(int sectionStep)
     {
         skippedSections.Add(sectionStep);
@@ -120,7 +121,7 @@ public class SessionLogger : MonoBehaviour
         WriteToDisk();
     }
 
-    /// <summary>Aufrufen, sobald ein Tröpfchen erfolgreich zum Schweben gebracht wurde.</summary>
+    /// <summary>Aufrufen, sobald ein Trï¿½pfchen erfolgreich zum Schweben gebracht wurde.</summary>
     public void MarkFloatTaskCompleted()
     {
         floatTimestamps.Add(DateTime.Now.ToString("HH:mm:ss"));
@@ -130,6 +131,12 @@ public class SessionLogger : MonoBehaviour
     public void SetParticipantId(string id)
     {
         participantId = id;
+        WriteToDisk();
+    }
+
+    public void SetLanguage(AppLanguage language)
+    {
+        languageCode = language == AppLanguage.English ? "en" : "de";
         WriteToDisk();
     }
 
@@ -230,8 +237,11 @@ public class SessionLogger : MonoBehaviour
         AddField(header, row, "ParticipantId", participantId);
         AddField(header, row, "AppName", appName);
         AddField(header, row, "SessionStart", sessionStart);
+        AddField(header, row, "Language", string.IsNullOrEmpty(languageCode)
+            ? (LanguageManager.IsEnglish ? "en" : "de")
+            : languageCode);
 
-        // Pre-Test (gewählter Index 0=A,1=B,2=C; -1 = nicht beantwortet)
+        // Pre-Test (gewï¿½hlter Index 0=A,1=B,2=C; -1 = nicht beantwortet)
         for (int i = 0; i < questionCount; i++)
         {
             string val = (i < cachedPre.Count) ? cachedPre[i].ToString() : "";
@@ -247,7 +257,7 @@ public class SessionLogger : MonoBehaviour
         AddField(header, row, "Post_CorrectCount", cachedPostCorrect.ToString());
         AddField(header, row, "Post_Total", cachedPostTotal.ToString());
 
-        // Fragebögen (CLS / IPQ / Weitere Fragen) – pro Item eine Spalte
+        // Fragebï¿½gen (CLS / IPQ / Weitere Fragen) ï¿½ pro Item eine Spalte
         Dictionary<string, int> qVals = GetQuestionnaireValues();
         foreach (string id in questionnaireIds)
         {
@@ -265,7 +275,7 @@ public class SessionLogger : MonoBehaviour
         AddField(header, row, "Radius_FirstCompleted", radiusTimestamps.Count > 0 ? radiusTimestamps[0] : "");
         AddField(header, row, "Radius_AllTimestamps", string.Join(LISTSEP.ToString(), radiusTimestamps));
 
-        // Aufgabe: Tröpfchen zum Schweben bringen
+        // Aufgabe: Trï¿½pfchen zum Schweben bringen
         AddField(header, row, "Float_Count", floatTimestamps.Count.ToString());
         AddField(header, row, "Float_FirstCompleted", floatTimestamps.Count > 0 ? floatTimestamps[0] : "");
         AddField(header, row, "Float_AllTimestamps", string.Join(LISTSEP.ToString(), floatTimestamps));
@@ -273,7 +283,7 @@ public class SessionLogger : MonoBehaviour
         try
         {
             string content = header.ToString() + "\n" + row.ToString() + "\n";
-            File.WriteAllText(filePath, content, new UTF8Encoding(true)); // BOM für Excel-Umlaute
+            File.WriteAllText(filePath, content, new UTF8Encoding(true)); // BOM fï¿½r Excel-Umlaute
         }
         catch (Exception e)
         {

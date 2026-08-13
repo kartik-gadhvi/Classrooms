@@ -51,6 +51,22 @@ public class RadiusSliderController : MonoBehaviour
         SetupSlider();
     }
 
+    private void OnEnable()
+    {
+        LanguageManager.Changed += OnLanguageChanged;
+    }
+
+    private void OnDisable()
+    {
+        LanguageManager.Changed -= OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged(AppLanguage language)
+    {
+        if (radiusSlider != null)
+            UpdateRadiusText(radiusSlider.value);
+    }
+
     private void Start()
     {
         if (hidePanelOnStart && panelRoot != null)
@@ -202,6 +218,6 @@ public class RadiusSliderController : MonoBehaviour
     private void UpdateRadiusText(float radius)
     {
         if (radiusText != null)
-            radiusText.text = "Radius: " + radius.ToString("0.00") + " \u00B5m";
+            radiusText.text = ExperimentStrings.RadiusSlider(radius.ToString("0.00") + " \u00B5m");
     }
 }

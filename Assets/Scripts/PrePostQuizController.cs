@@ -20,6 +20,7 @@ public class PrePostQuizController : MonoBehaviour
 
     public enum QuizMode
     {
+        LanguageSelect,
         PreQuiz,
         PostQuiz,
         Welcome
@@ -55,14 +56,6 @@ public class PrePostQuizController : MonoBehaviour
 
     [Header("Flow")]
     public bool startPreQuizOnStart = true;
-
-    private const string WelcomeText =
-        "Willkommen im VR-Labor.\n\n" +
-        "Gleich beginnt der Millikan-Versuch.\n\n" +
-        "Teleportation:\n" +
-        "Halte den rechten Joystick nach vorne gedrueckt.\n" +
-        "Ziele auf die Stelle, auf die der gruene Pfeil zeigt.\n" +
-        "Lasse den Joystick los, um dich dorthin zu teleportieren.";
 
     private readonly List<QuizQuestion> questions = new List<QuizQuestion>();
     private readonly List<int> preAnswers = new List<int>();
@@ -101,7 +94,7 @@ public class PrePostQuizController : MonoBehaviour
     private void Start()
     {
         if (startPreQuizOnStart)
-            StartPreQuiz();
+            ShowLanguageSelect();
         else
             HideWall();
     }
@@ -173,6 +166,7 @@ public class PrePostQuizController : MonoBehaviour
         waitingForPostFeedback = false;
 
         preAnswers.Clear();
+        SetupQuestions();
 
         ShowWall();
         ShowQuizGroupOnly();
@@ -189,6 +183,7 @@ public class PrePostQuizController : MonoBehaviour
         waitingForPostFeedback = false;
 
         postAnswers.Clear();
+        SetupQuestions();
 
         ShowWall();
         ShowQuizGroupOnly();
@@ -212,7 +207,7 @@ public class PrePostQuizController : MonoBehaviour
         QuizQuestion q = questions[currentQuestionIndex];
 
         if (modeText != null)
-            modeText.text = currentMode == QuizMode.PreQuiz ? "Vorwissenstest" : "Nachtest";
+            modeText.text = currentMode == QuizMode.PreQuiz ? ExperimentStrings.QuizPreTitle : ExperimentStrings.QuizPostTitle;
 
         if (questionText != null)
             questionText.text = (currentQuestionIndex + 1) + ". " + q.question;
@@ -235,6 +230,13 @@ public class PrePostQuizController : MonoBehaviour
 
     private void SelectAnswer(int selectedIndex)
     {
+        if (currentMode == QuizMode.LanguageSelect)
+        {
+            LanguageManager.Set(selectedIndex == 1 ? AppLanguage.English : AppLanguage.German);
+            StartPreQuiz();
+            return;
+        }
+
         if (waitingForPostFeedback)
             return;
 
@@ -315,10 +317,10 @@ public class PrePostQuizController : MonoBehaviour
         ShowContinueButton(true);
 
         if (modeText != null)
-            modeText.text = "Einfuehrung";
+            modeText.text = ExperimentStrings.QuizWelcomeTitle;
 
         if (questionText != null)
-            questionText.text = WelcomeText;
+            questionText.text = ExperimentStrings.WelcomeText;
 
         if (answerTextA != null)
             answerTextA.text = "";
@@ -336,7 +338,7 @@ public class PrePostQuizController : MonoBehaviour
             resultText.text = "";
 
         if (continueText != null)
-            continueText.text = "Weiter";
+            continueText.text = ExperimentStrings.Continue;
 
         Canvas.ForceUpdateCanvases();
     }
@@ -346,16 +348,16 @@ public class PrePostQuizController : MonoBehaviour
         ShowResultGroupOnly();
 
         if (modeText != null)
-            modeText.text = "Nachtest";
+            modeText.text = ExperimentStrings.QuizPostTitle;
 
         if (scoreText != null)
-            scoreText.text = "Richtig: " + correctPostCount + "/" + questions.Count;
+            scoreText.text = ExperimentStrings.QuizScore(correctPostCount, questions.Count);
 
         if (resultText != null)
-            resultText.text = "Ergebnis: " + correctPostCount + "/" + questions.Count + " richtig.";
+            resultText.text = ExperimentStrings.QuizResult(correctPostCount, questions.Count);
 
         if (continueText != null)
-            continueText.text = "Weiter";
+            continueText.text = ExperimentStrings.Continue;
 
         ShowContinueButton(true);
     }
@@ -381,7 +383,7 @@ public class PrePostQuizController : MonoBehaviour
             return;
 
         if (currentMode == QuizMode.PostQuiz)
-            scoreText.text = "Richtig: " + correctPostCount + "/" + questions.Count;
+            scoreText.text = ExperimentStrings.QuizScore(correctPostCount, questions.Count);
         else
             scoreText.text = "";
     }
@@ -506,107 +508,59 @@ public class PrePostQuizController : MonoBehaviour
         waitingForPostFeedback = false;
     }
 
+    private void ShowLanguageSelect()
+    {
+        currentMode = QuizMode.LanguageSelect;
+
+        ShowWall();
+        ShowQuizGroupOnly();
+        ShowAnswerButtons(true);
+        if (answerButtonC != null)
+            answerButtonC.gameObject.SetActive(false);
+        ShowContinueButton(false);
+        SetAnswerButtonsInteractable(true);
+        ClearButtonSelection();
+        ResetButtonColors();
+
+        if (modeText != null)
+            modeText.text = ExperimentStrings.LanguageTitle;
+
+        if (questionText != null)
+            questionText.text = ExperimentStrings.LanguageQuestion;
+
+        if (answerTextA != null)
+            answerTextA.text = "A. " + ExperimentStrings.LanguageGerman;
+
+        if (answerTextB != null)
+            answerTextB.text = "B. " + ExperimentStrings.LanguageEnglish;
+
+        if (answerTextC != null)
+            answerTextC.text = "";
+
+        if (scoreText != null)
+            scoreText.text = "";
+
+        if (resultText != null)
+            resultText.text = "";
+
+        Canvas.ForceUpdateCanvases();
+    }
+
     private void SetupQuestions()
     {
         questions.Clear();
 
-        questions.Add(new QuizQuestion
+        for (int i = 0; i < ExperimentStrings.QuizCount; i++)
         {
-            question = "Wie war die zentrale Forschungsfrage, die Robert Millikan mit seinem Experiment beantworten wollte?",
-            answerA = "Koennen Oeltroepfchen durch reine Lichtenergie in der Schwebe gehalten werden?",
-            answerB = "Wie gross ist die Masse eines Elektrons im Vergleich zu einem Oeltroepfchen?",
-            answerC = "Ist elektrische Ladung diskret in unteilbaren Einheiten aufgebaut oder kontinuierlich?",
-            correctIndex = 2
-        });
-
-        questions.Add(new QuizQuestion
-        {
-            question = "Welche Beobachtung macht man beim Blick durch das Mikroskop auf die fallenden Troepfchen?",
-            answerA = "Die Troepfchen scheinen nach oben zu steigen, da das Mikroskop das Bild spiegelt.",
-            answerB = "Man kann die exakte Anzahl der Elektronen auf der Oberflaeche des Tropfens sehen.",
-            answerC = "Die Troepfchen erscheinen als farbige Ringe aufgrund der Lichtbrechung.",
-            correctIndex = 0
-        });
-
-        questions.Add(new QuizQuestion
-        {
-            question = "Warum schlug Millikans Doktorand Harvey Fletcher die Verwendung von Oel anstelle von Wasser vor?",
-            answerA = "Oeltroepfchen bleiben stundenlang stabil und verdunsten nicht so schnell wie Wasser.",
-            answerB = "Oel laesst sich durch Reibung wesentlich schneller aufladen als Wasser.",
-            answerC = "Die Dichte von Oel entspricht exakt der Erdbeschleunigung g.",
-            correctIndex = 0
-        });
-
-        questions.Add(new QuizQuestion
-        {
-            question = "Wie wird im Millikan-Versuch der Radius r eines Oeltroepfchens bestimmt?",
-            answerA = "Aus der Fallgeschwindigkeit des Troepfchens bei ausgeschaltetem elektrischem Feld.",
-            answerB = "Durch die Messung der Zeit, die das Troepfchen zum Schweben benoetigt.",
-            answerC = "Durch das Ablesen an einer Skala direkt auf der Oberflaeche des Zerstaeubers.",
-            correctIndex = 0
-        });
-
-        questions.Add(new QuizQuestion
-        {
-            question = "Welcher Zustand muss erreicht sein, damit ein Troepfchen in der Kammer schwebt?",
-            answerA = "Der Zerstaeuber muss einen konstanten Luftstrom erzeugen, der das Troepfchen traegt.",
-            answerB = "Die elektrische Kraft F_el muss die Gewichtskraft F_G exakt ausgleichen.",
-            answerC = "Die Spannung muss auf den maximalen Wert der Spannungsquelle eingestellt sein.",
-            correctIndex = 1
-        });
-
-        questions.Add(new QuizQuestion
-        {
-            question = "Was besagt das Prinzip der Ladungsquantisierung?",
-            answerA = "Elektrische Ladung kann in beliebig kleine Bruchstuecke unterteilt werden.",
-            answerB = "Jede gemessene Ladung ist immer ein ganzzahliges Vielfaches der Elementarladung e.",
-            answerC = "Die Ladung eines Troepfchens nimmt stetig ab, je laenger es in der Kammer schwebt.",
-            correctIndex = 1
-        });
-
-        questions.Add(new QuizQuestion
-        {
-            question = "Warum schloss Millikan bestimmte Messwerte aus seinen Veroeffentlichungen aus, wie in seinen Notizbuechern entdeckt wurde?",
-            answerA = "Er wollte die Ergebnisse seines Doktoranden Harvey Fletcher absichtlich faelschen.",
-            answerB = "Er erkannte technische Fehler wie Luftzuege oder Erschuetterungen waehrend dieser Messungen.",
-            answerC = "Die ausgeschlossenen Werte waren mathematisch nicht berechenbar.",
-            correctIndex = 1
-        });
-
-        questions.Add(new QuizQuestion
-        {
-            question = "Welcher physikalische Parameter war fuer die leichte Abweichung von Millikans Wert (1,592 * 10^-19 C) zum heutigen Standardwert verantwortlich?",
-            answerA = "Schwankungen im Magnetfeld der Erde in Chicago.",
-            answerB = "Ein ungenauer Literaturwert fuer die Luftviskositaet eta.",
-            answerC = "Die fehlerhafte Zaehlung der Troepfchen im Histogramm.",
-            correctIndex = 1
-        });
-
-        questions.Add(new QuizQuestion
-        {
-            question = "Welche Rolle spielte Harvey Fletcher im Zusammenhang mit dem Nobelpreis von 1923?",
-            answerA = "Er war der schaerfste Kritiker der Schwebemethode und versuchte den Versuch zu verhindern.",
-            answerB = "Er verzichtete vertraglich auf die Autorenschaft und wurde daher nicht mit dem Nobelpreis ausgezeichnet.",
-            answerC = "Er erhielt den Nobelpreis gemeinsam mit Millikan fuer die Entdeckung des Elektrons.",
-            correctIndex = 1
-        });
-
-        questions.Add(new QuizQuestion
-        {
-            question = "In welcher Einheit wird die Elementarladung e typischerweise angegeben?",
-            answerA = "Volt pro Meter (V/m).",
-            answerB = "Newton pro Kilogramm (N/kg).",
-            answerC = "Coulomb (C).",
-            correctIndex = 2
-        });
-
-        questions.Add(new QuizQuestion
-        {
-            question = "Welcher physikalische Zusammenhang wird durch das Stokes'sche Gesetz im Experiment genutzt?",
-            answerA = "Die elektrische Kraft auf ein Teilchen nimmt quadratisch mit der Entfernung zum Kondensator ab.",
-            answerB = "Die Masse eines Troepfchens verringert sich proportional zu seiner Fallzeit.",
-            answerC = "Die Reibungskraft der Luft auf eine Kugel haengt direkt von deren Radius ab.",
-            correctIndex = 2
-        });
+            ExperimentStrings.QuizItem item = ExperimentStrings.Quiz(i);
+            questions.Add(new QuizQuestion
+            {
+                question = item.question,
+                answerA = item.answerA,
+                answerB = item.answerB,
+                answerC = item.answerC,
+                correctIndex = item.correctIndex
+            });
+        }
     }
 }
