@@ -57,9 +57,7 @@ namespace VRChat
         [Tooltip("Whisper language code, e.g. de or en. Leave empty to auto-detect.")]
         [SerializeField] private string whisperLanguage = "en";
 
-        // Created components
         private VRChatController chatController;
-        private VRChatPrefabBuilder prefabBuilder;
         private VRChatTTS ttsManager;
         private VRSpeechToText sttManager;
 
@@ -87,16 +85,6 @@ namespace VRChat
             if (chatController == null)
             {
                 chatController = gameObject.AddComponent<VRChatController>();
-            }
-
-            if (requireChatUI)
-            {
-                prefabBuilder = gameObject.GetComponent<VRChatPrefabBuilder>();
-                if (prefabBuilder == null)
-                    prefabBuilder = gameObject.AddComponent<VRChatPrefabBuilder>();
-
-                ConfigurePrefabBuilder();
-                prefabBuilder.BuildPrefabs();
             }
 
             ConfigureChatController();
@@ -232,22 +220,6 @@ namespace VRChat
             return valid;
         }
 
-        private void ConfigurePrefabBuilder()
-        {
-            var type = typeof(VRChatPrefabBuilder);
-            var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
-
-            // Set theme colors
-            var userColorField = type.GetField("userBubbleColor", flags);
-            userColorField?.SetValue(prefabBuilder, userBubbleColor);
-
-            var aiColorField = type.GetField("aiBubbleColor", flags);
-            aiColorField?.SetValue(prefabBuilder, aiBubbleColor);
-
-            var textColorField = type.GetField("textColor", flags);
-            textColorField?.SetValue(prefabBuilder, textColor);
-        }
-
         private void ConfigureChatController()
         {
             var type = typeof(VRChatController);
@@ -275,18 +247,6 @@ namespace VRChat
 
             var buttonField = type.GetField("sendButton", flags);
             buttonField?.SetValue(chatController, sendButton);
-
-            if (prefabBuilder != null)
-            {
-                var userPrefabField = type.GetField("userMessagePrefab", flags);
-                userPrefabField?.SetValue(chatController, prefabBuilder.userMessagePrefab);
-
-                var aiPrefabField = type.GetField("aiMessagePrefab", flags);
-                aiPrefabField?.SetValue(chatController, prefabBuilder.aiMessagePrefab);
-
-                var typingField = type.GetField("typingIndicatorPrefab", flags);
-                typingField?.SetValue(chatController, prefabBuilder.typingIndicatorPrefab);
-            }
 
             // Set colors
             var userBubbleField = type.GetField("userBubbleColor", flags);
@@ -343,64 +303,7 @@ namespace VRChat
             // Log errors
             ttsManager.OnError += (error) => Debug.LogError($"[VRChatTTS] {error}");
 
-            // Auto-connect TTS AudioSource to Avatar controllers for lip sync
-            ConnectTTSToAvatars();
-
             Debug.Log($"[VRChatSetup] TTS enabled with voice: {aiVoice}");
-        }
-
-        /// <summary>
-        /// Automatically connects the TTS AudioSource to all AvatarController and SimpleLipSync components
-        /// </summary>
-        private void ConnectTTSToAvatars()
-        {
-            if (ttsManager == null || ttsManager.AudioSource == null)
-            {
-                Debug.LogWarning("[VRChatSetup] TTS AudioSource not ready, will retry in Start");
-                StartCoroutine(ConnectTTSToAvatarsDelayed());
-                return;
-            }
-
-            DoConnectTTSToAvatars();
-        }
-
-        private System.Collections.IEnumerator ConnectTTSToAvatarsDelayed()
-        {
-            // Wait a frame for TTS to initialize its AudioSource
-            yield return null;
-            yield return null;
-            DoConnectTTSToAvatars();
-        }
-
-        private void DoConnectTTSToAvatars()
-        {
-            AudioSource ttsAudio = ttsManager?.AudioSource;
-            if (ttsAudio == null)
-            {
-                Debug.LogWarning("[VRChatSetup] TTS AudioSource still not available");
-                return;
-            }
-
-            // Find all AvatarController components and connect TTS AudioSource
-            var avatarControllers = FindObjectsByType<AvatarController>(FindObjectsSortMode.None);
-            foreach (var controller in avatarControllers)
-            {
-                controller.SetTTSAudioSource(ttsAudio);
-                Debug.Log($"[VRChatSetup] Connected TTS AudioSource to AvatarController on: {controller.gameObject.name}");
-            }
-
-            // Find all SimpleLipSync components and connect TTS AudioSource  
-            var lipSyncs = FindObjectsByType<SimpleLipSync>(FindObjectsSortMode.None);
-            foreach (var lipSync in lipSyncs)
-            {
-                lipSync.SetTTSAudioSource(ttsAudio);
-                Debug.Log($"[VRChatSetup] Connected TTS AudioSource to SimpleLipSync on: {lipSync.gameObject.name}");
-            }
-
-            if (avatarControllers.Length == 0 && lipSyncs.Length == 0)
-            {
-                Debug.Log("[VRChatSetup] No AvatarController or SimpleLipSync found in scene");
-            }
         }
 
         private void SetupSTT()

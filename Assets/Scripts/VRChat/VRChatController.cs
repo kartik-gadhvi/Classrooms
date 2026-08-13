@@ -236,36 +236,24 @@ namespace VRChat
             GameObject bubble = Instantiate(userMessagePrefab, contentContainer);
             bubble.SetActive(true);
 
-            var messageBubble = bubble.GetComponent<VRMessageBubble>();
-            if (messageBubble != null)
-            {
-                messageBubble.SetMessage(message, true, userBubbleColor, userTextColor);
-            }
-            else
-            {
-                // Fallback: try to find TMP text directly
-                var tmpText = bubble.GetComponentInChildren<TextMeshProUGUI>();
-                if (tmpText != null) tmpText.text = message;
-            }
+            var tmpText = bubble.GetComponentInChildren<TextMeshProUGUI>();
+            if (tmpText != null) tmpText.text = message;
 
             ScrollToBottom();
         }
 
-        private VRMessageBubble CreateAIBubble()
+        private TextMeshProUGUI CreateAIBubble()
         {
             if (aiMessagePrefab == null || contentContainer == null) return null;
 
             GameObject bubble = Instantiate(aiMessagePrefab, contentContainer);
             bubble.SetActive(true);
 
-            var messageBubble = bubble.GetComponent<VRMessageBubble>();
-            if (messageBubble != null)
-            {
-                messageBubble.SetMessage("", false, aiBubbleColor, aiTextColor);
-            }
+            var tmpText = bubble.GetComponentInChildren<TextMeshProUGUI>();
+            if (tmpText != null) tmpText.text = "";
 
             ScrollToBottom();
-            return messageBubble;
+            return tmpText;
         }
 
         private void ShowTypingIndicator()
@@ -375,11 +363,9 @@ namespace VRChat
             // Create AI bubble with response
             if (!string.IsNullOrEmpty(responseText))
             {
-                var aiBubble = CreateAIBubble();
-                if (aiBubble != null)
-                {
-                    aiBubble.SetMessage(responseText, false, aiBubbleColor, aiTextColor);
-                }
+                var aiText = CreateAIBubble();
+                if (aiText != null)
+                    aiText.text = responseText;
 
                 // Add to history if no error
                 if (!hasError)
