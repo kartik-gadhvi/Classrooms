@@ -260,7 +260,7 @@ namespace VRChat
             recordingClip = Microphone.Start(microphoneDevice, false, maxRecordingSeconds, sampleRate);
 
             // Visual/audio feedback
-            if (recordingIndicator != null) recordingIndicator.SetActive(true);
+            if (recordingIndicator != null) SetRecordingVisual(true);
             if (feedbackAudio != null && startRecordingSound != null)
             {
                 feedbackAudio.PlayOneShot(startRecordingSound);
@@ -282,7 +282,7 @@ namespace VRChat
             isRecording = false;
 
             // Visual/audio feedback
-            if (recordingIndicator != null) recordingIndicator.SetActive(false);
+            if (recordingIndicator != null) SetRecordingVisual(false);
             if (feedbackAudio != null && stopRecordingSound != null)
             {
                 feedbackAudio.PlayOneShot(stopRecordingSound);
@@ -365,6 +365,13 @@ namespace VRChat
                     }
                     Debug.LogError($"[VRSpeechToText] {error}");
                     OnError?.Invoke(error);
+                    if (SessionLogger.Instance != null)
+                    {
+                        if (GroqQuotaGuard.IsQuotaOrRateLimit(error))
+                            SessionLogger.Instance.RegisterAiQuotaExceeded(error);
+                        else
+                            SessionLogger.Instance.RegisterAiError(error);
+                    }
                     yield break;
                 }
 
@@ -451,6 +458,17 @@ namespace VRChat
             return wav;
         }
 
+        private void SetRecordingVisual(bool recording)
+        {
+            if (recordingIndicator == null)
+                return;
+
+            recordingIndicator.SetActive(recording);
+            var indicator = recordingIndicator.GetComponent<RecordingIndicator>();
+            if (indicator != null)
+                indicator.SetRecording(recording);
+        }
+
         public void SetApiKey(string key)
         {
             apiKey = key;
@@ -477,7 +495,7 @@ namespace VRChat
             wasGripPressed = false;
 
             if (recordingIndicator != null)
-                recordingIndicator.SetActive(false);
+                SetRecordingVisual(false);
 
             if (!string.IsNullOrEmpty(microphoneDevice))
                 Microphone.End(microphoneDevice);

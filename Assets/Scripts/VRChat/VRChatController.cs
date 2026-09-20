@@ -16,10 +16,11 @@ namespace VRChat
     {
         [Header("Groq API Configuration")]
         [SerializeField] private string apiKey = "YOUR_GROQ_API_KEY";
-        [SerializeField] private string model = "llama-3.3-70b-versatile";
+        [SerializeField] private string model = "openai/gpt-oss-20b";
         [SerializeField] [TextArea(3, 5)] private string systemPrompt = "You are a helpful, friendly AI assistant in a VR environment. Be concise but thorough. Keep responses under 100 words unless asked for more detail.";
         [SerializeField] private float temperature = 0.7f;
-        [SerializeField] private int maxTokens = 1024;
+        [SerializeField] private int maxTokens = 256;
+        [SerializeField] private int maxHistoryTurns = 6;
 
         [Header("UI References")]
         [SerializeField] private ScrollRect chatScrollRect;
@@ -46,8 +47,16 @@ namespace VRChat
         // Events for TTS integration
         public System.Action<string> OnAIResponseReceived;
         public System.Action<string> OnUserMessageSent;
+        public System.Action OnProcessingStarted;
+        public System.Action OnProcessingFinished;
+        public System.Action<string> OnError;
+        public System.Action<int, int, int> OnTokenUsage;
 
         public bool IsProcessing => isProcessing;
+        public bool QuotaExceeded { get; private set; }
+        public int SessionPromptTokens { get; private set; }
+        public int SessionCompletionTokens { get; private set; }
+        public int SessionTotalTokens { get; private set; }
 
         private GroqApiClient groqApi;
         private List<JsonObject> conversationHistory = new List<JsonObject>();
@@ -100,6 +109,7 @@ namespace VRChat
             }
 
             groqApi = new GroqApiClient(apiKey);
+            model = GroqChatModel.Resolve(model);
             Debug.Log($"[VRChatController] Groq API initialized with model: {model}");
         }
 
@@ -139,7 +149,7 @@ namespace VRChat
         /// </summary>
         public void SendMessage(string message)
         {
-            if (isProcessing || string.IsNullOrWhiteSpace(message)) return;
+            if (isProcessing || QuotaExceeded || string.IsNullOrWhiteSpace(message)) return;
 
             // Clear input if using UI
             if (inputField != null)
@@ -282,12 +292,15 @@ namespace VRChat
         private IEnumerator ProcessChatRequest()
         {
             isProcessing = true;
+            OnProcessingStarted?.Invoke();
 
             // Disable send button
             if (sendButton != null) sendButton.interactable = false;
 
             // Show typing indicator
             ShowTypingIndicator();
+
+            TrimConversationHistory();
 
             // Build request
             var messagesArray = new JsonArray();
@@ -314,54 +327,76 @@ namespace VRChat
 
             var request = new JsonObject
             {
-                ["model"] = model,
+                ["model"] = GroqChatModel.Resolve(model),
                 ["messages"] = messagesArray,
                 ["temperature"] = temperature,
                 ["max_completion_tokens"] = maxTokens
             };
 
-            // Make API call
             System.Threading.Tasks.Task<JsonObject> apiTask = null;
             string responseText = "";
             bool hasError = false;
+            string errorMessage = "";
+            bool retriedModel = false;
 
-            try
+            while (true)
             {
-                apiTask = groqApi.CreateChatCompletionAsync(request);
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogError($"[VRChatController] API call failed: {e.Message}");
-                hasError = true;
-            }
+                apiTask = null;
+                hasError = false;
+                errorMessage = "";
 
-            if (apiTask != null)
-            {
-                // Wait for completion
-                while (!apiTask.IsCompleted)
+                try
                 {
-                    yield return null;
+                    apiTask = groqApi.CreateChatCompletionAsync(request);
                 }
-
-                if (apiTask.IsFaulted)
+                catch (System.Exception e)
                 {
-                    Debug.LogError($"[VRChatController] API Error: {apiTask.Exception?.InnerException?.Message}");
-                    responseText = "Sorry, I encountered an error. Please try again.";
+                    Debug.LogError($"[VRChatController] API call failed: {e.Message}");
                     hasError = true;
+                    errorMessage = e.Message;
                 }
-                else if (apiTask.IsCompletedSuccessfully)
+
+                if (apiTask != null)
                 {
-                    var result = apiTask.Result;
-                    responseText = result?["choices"]?[0]?["message"]?["content"]?.GetValue<string>() ?? "";
-                    Debug.Log($"[VRChatController] Response received: {(responseText.Length > 50 ? responseText.Substring(0, 50) + "..." : responseText)}");
+                    while (!apiTask.IsCompleted)
+                        yield return null;
+
+                    if (apiTask.IsFaulted)
+                    {
+                        errorMessage = apiTask.Exception?.InnerException?.Message ?? apiTask.Exception?.Message ?? "API error";
+                        Debug.LogError($"[VRChatController] API Error: {errorMessage}");
+                        responseText = "Sorry, I encountered an error. Please try again.";
+                        hasError = true;
+                    }
+                    else if (apiTask.IsCompletedSuccessfully)
+                    {
+                        var result = apiTask.Result;
+                        responseText = result?["choices"]?[0]?["message"]?["content"]?.GetValue<string>() ?? "";
+                        RecordUsage(result);
+                        Debug.Log($"[VRChatController] Response received: {(responseText.Length > 50 ? responseText.Substring(0, 50) + "..." : responseText)}");
+                    }
                 }
+
+                if (hasError && !retriedModel && GroqChatModel.IsModelNotFound(errorMessage))
+                {
+                    retriedModel = true;
+                    model = GroqChatModel.NextFallback(model);
+                    request["model"] = model;
+                    Debug.LogWarning("[VRChatController] Retrying with model " + model);
+                    continue;
+                }
+
+                break;
             }
+
+            if (hasError)
+                HandleApiError(errorMessage);
 
             // Hide typing indicator
             HideTypingIndicator();
 
             // Create AI bubble with response
-            if (!string.IsNullOrEmpty(responseText))
+            if (!string.IsNullOrEmpty(responseText) && !QuotaExceeded)
             {
                 var aiText = CreateAIBubble();
                 if (aiText != null)
@@ -391,12 +426,76 @@ namespace VRChat
             if (sendButton != null) sendButton.interactable = true;
 
             isProcessing = false;
+            OnProcessingFinished?.Invoke();
 
             // Refocus input field
             if (inputField != null)
             {
                 inputField.Select();
                 inputField.ActivateInputField();
+            }
+        }
+
+        private void RecordUsage(JsonObject result)
+        {
+            var usage = result?["usage"];
+            if (usage == null)
+                return;
+
+            int prompt = ReadTokenCount(usage["prompt_tokens"]);
+            int completion = ReadTokenCount(usage["completion_tokens"]);
+            int total = ReadTokenCount(usage["total_tokens"]);
+            if (total <= 0)
+                total = prompt + completion;
+
+            SessionPromptTokens += prompt;
+            SessionCompletionTokens += completion;
+            SessionTotalTokens += total;
+            OnTokenUsage?.Invoke(prompt, completion, total);
+
+            if (SessionLogger.Instance != null)
+                SessionLogger.Instance.RegisterAiUsage(prompt, completion, total);
+        }
+
+        private void HandleApiError(string errorMessage)
+        {
+            OnError?.Invoke(errorMessage);
+
+            if (GroqQuotaGuard.IsQuotaOrRateLimit(errorMessage))
+            {
+                QuotaExceeded = true;
+                if (SessionLogger.Instance != null)
+                    SessionLogger.Instance.RegisterAiQuotaExceeded(errorMessage);
+            }
+            else if (SessionLogger.Instance != null)
+            {
+                SessionLogger.Instance.RegisterAiError(errorMessage);
+            }
+        }
+
+        private void TrimConversationHistory()
+        {
+            int keep = Mathf.Max(2, maxHistoryTurns * 2);
+            int start = 0;
+            if (conversationHistory.Count > 0 && conversationHistory[0]?["role"]?.GetValue<string>() == "system")
+                start = 1;
+
+            while (conversationHistory.Count - start > keep)
+                conversationHistory.RemoveAt(start);
+        }
+
+        private static int ReadTokenCount(JsonNode node)
+        {
+            if (node == null)
+                return 0;
+
+            try
+            {
+                return node.GetValue<int>();
+            }
+            catch
+            {
+                return int.TryParse(node.ToString(), out int value) ? value : 0;
             }
         }
 

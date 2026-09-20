@@ -30,6 +30,8 @@ namespace VRChat
         private bool isRecording = false;
         private Material material;
 
+        private static readonly int BaseColorID = Shader.PropertyToID("_BaseColor");
+
         void Awake()
         {
             originalScale = transform.localScale;
@@ -93,7 +95,13 @@ namespace VRChat
         {
             if (uiImage != null) uiImage.color = color;
             if (spriteRenderer != null) spriteRenderer.color = color;
-            if (material != null) material.color = color;
+            if (material != null)
+            {
+                if (material.HasProperty(BaseColorID))
+                    material.SetColor(BaseColorID, color);
+                else
+                    material.color = color;
+            }
         }
 
         private void SetAlpha(float alpha)
@@ -112,34 +120,19 @@ namespace VRChat
             }
             if (material != null)
             {
-                var c = material.color;
-                c.a = alpha;
-                material.color = c;
+                if (material.HasProperty(BaseColorID))
+                {
+                    var c = material.GetColor(BaseColorID);
+                    c.a = alpha;
+                    material.SetColor(BaseColorID, c);
+                }
+                else
+                {
+                    var c = material.color;
+                    c.a = alpha;
+                    material.color = c;
+                }
             }
         }
-
-        void OnEnable()
-        {
-            // Subscribe to STT events
-            var stt = FindFirstObjectByType<VRSpeechToText>();
-            if (stt != null)
-            {
-                stt.OnRecordingStarted += OnRecordingStarted;
-                stt.OnRecordingStopped += OnRecordingStopped;
-            }
-        }
-
-        void OnDisable()
-        {
-            var stt = FindFirstObjectByType<VRSpeechToText>();
-            if (stt != null)
-            {
-                stt.OnRecordingStarted -= OnRecordingStarted;
-                stt.OnRecordingStopped -= OnRecordingStopped;
-            }
-        }
-
-        private void OnRecordingStarted() => SetRecording(true);
-        private void OnRecordingStopped() => SetRecording(false);
     }
 }

@@ -59,6 +59,13 @@ public class SessionLogger : MonoBehaviour
     private readonly List<string> radiusTimestamps = new List<string>();
     private readonly List<string> floatTimestamps = new List<string>();
     private string languageCode = "";
+    private int aiPromptTokens;
+    private int aiCompletionTokens;
+    private int aiTotalTokens;
+    private int aiRequestCount;
+    private int aiErrorCount;
+    private bool aiQuotaExceeded;
+    private string aiLastError = "";
 
     private void Awake()
     {
@@ -138,6 +145,28 @@ public class SessionLogger : MonoBehaviour
     {
         languageCode = language == AppLanguage.English ? "en" : "de";
         WriteToDisk();
+    }
+
+    public void RegisterAiUsage(int promptTokens, int completionTokens, int totalTokens)
+    {
+        aiRequestCount++;
+        aiPromptTokens += promptTokens;
+        aiCompletionTokens += completionTokens;
+        aiTotalTokens += totalTokens;
+        WriteToDisk();
+    }
+
+    public void RegisterAiError(string error)
+    {
+        aiErrorCount++;
+        aiLastError = error ?? "";
+        WriteToDisk();
+    }
+
+    public void RegisterAiQuotaExceeded(string error)
+    {
+        aiQuotaExceeded = true;
+        RegisterAiError(error);
     }
 
     /// <summary>Erzwingt ein Schreiben (z. B. am Ende der Studie).</summary>
@@ -279,6 +308,14 @@ public class SessionLogger : MonoBehaviour
         AddField(header, row, "Float_Count", floatTimestamps.Count.ToString());
         AddField(header, row, "Float_FirstCompleted", floatTimestamps.Count > 0 ? floatTimestamps[0] : "");
         AddField(header, row, "Float_AllTimestamps", string.Join(LISTSEP.ToString(), floatTimestamps));
+
+        AddField(header, row, "AI_RequestCount", aiRequestCount.ToString());
+        AddField(header, row, "AI_PromptTokens", aiPromptTokens.ToString());
+        AddField(header, row, "AI_CompletionTokens", aiCompletionTokens.ToString());
+        AddField(header, row, "AI_TotalTokens", aiTotalTokens.ToString());
+        AddField(header, row, "AI_ErrorCount", aiErrorCount.ToString());
+        AddField(header, row, "AI_QuotaExceeded", aiQuotaExceeded ? "true" : "false");
+        AddField(header, row, "AI_LastError", aiLastError);
 
         try
         {

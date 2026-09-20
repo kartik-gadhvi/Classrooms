@@ -18,7 +18,7 @@ namespace VRChat
     {
         [Header("API Configuration (Required)")]
         [SerializeField] private string groqApiKey = "YOUR_GROQ_API_KEY";
-        [SerializeField] private string model = "llama-3.3-70b-versatile";
+        [SerializeField] private string model = "openai/gpt-oss-20b";
         [SerializeField] [TextArea(2, 4)] private string systemPrompt = "You are a helpful AI assistant in a VR environment. Keep responses concise and friendly.";
 
         [Header("Auto-Detection (Optional - Leave empty to auto-find)")]
@@ -230,10 +230,16 @@ namespace VRChat
             apiKeyField?.SetValue(chatController, groqApiKey);
 
             var modelField = type.GetField("model", flags);
-            modelField?.SetValue(chatController, model);
+            modelField?.SetValue(chatController, GroqChatModel.Resolve(model));
 
             var promptField = type.GetField("systemPrompt", flags);
             promptField?.SetValue(chatController, systemPrompt);
+
+            var maxTokensField = type.GetField("maxTokens", flags);
+            maxTokensField?.SetValue(chatController, 256);
+
+            var historyField = type.GetField("maxHistoryTurns", flags);
+            historyField?.SetValue(chatController, 6);
 
             // Set UI references
             var scrollField = type.GetField("chatScrollRect", flags);

@@ -312,6 +312,13 @@ namespace VRChat
                     }
                     Debug.LogError($"[VRChatTTS] {error}");
                     OnError?.Invoke(error);
+                    if (SessionLogger.Instance != null)
+                    {
+                        if (GroqQuotaGuard.IsQuotaOrRateLimit(error))
+                            SessionLogger.Instance.RegisterAiQuotaExceeded(error);
+                        else
+                            SessionLogger.Instance.RegisterAiError(error);
+                    }
                     ProcessQueue();
                     yield break;
                 }
