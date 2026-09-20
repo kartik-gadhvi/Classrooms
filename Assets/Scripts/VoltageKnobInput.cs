@@ -72,6 +72,10 @@ public class VoltageKnobInput : MonoBehaviour
     public bool debugLogs = false;
 
     public float CurrentVoltage { get; private set; }
+    public bool IsGrabbed => grabbed;
+
+    private VoltageFineControlUI fineControlUI;
+    private bool suppressSliderEvent;
 
     private bool grabbed;
     private Transform activeController;
@@ -120,6 +124,7 @@ public class VoltageKnobInput : MonoBehaviour
 
         RefreshInteractorCache();
         InitMaterials();
+        EnsureFineControlUI();
 
         SetVoltage(startVoltage, true);
         RefreshVisualState();
@@ -194,6 +199,11 @@ public class VoltageKnobInput : MonoBehaviour
         if (!interactionEnabled)
             EndGrab();
 
+        if (fineControlUI != null)
+            fineControlUI.SetVisible(enabled);
+        else if (voltageSlider != null)
+            voltageSlider.interactable = enabled;
+
         RefreshVisualState();
     }
 
@@ -265,7 +275,15 @@ public class VoltageKnobInput : MonoBehaviour
 
     public void SetVoltageFromExternal(float voltage)
     {
+        if (!interactionEnabled)
+            return;
+
         SetVoltage(voltage, true);
+    }
+
+    public void NudgeVoltage(float delta)
+    {
+        SetVoltageFromExternal(CurrentVoltage + delta);
     }
 
     private void CaptureVisualInitialRotation()
@@ -388,17 +406,32 @@ public class VoltageKnobInput : MonoBehaviour
 
         CurrentVoltage = clamped;
 
-        if (voltageSlider != null)
+        if (fineControlUI != null)
+            fineControlUI.SyncFromVoltage(CurrentVoltage, minVoltage, maxVoltage);
+        else if (voltageSlider != null)
         {
+            suppressSliderEvent = true;
             voltageSlider.minValue = minVoltage;
             voltageSlider.maxValue = maxVoltage;
+            voltageSlider.interactable = interactionEnabled;
             voltageSlider.value = CurrentVoltage;
+            suppressSliderEvent = false;
         }
 
         if (voltageText != null)
             voltageText.text = CurrentVoltage.ToString("0.0") + " V";
 
         ApplyVisualRotationFromVoltage();
+    }
+
+    private void EnsureFineControlUI()
+    {
+        if (fineControlUI != null)
+            return;
+
+        fineControlUI = VoltageFineControlUI.Create(this, voltageText);
+        voltageSlider = fineControlUI.Slider;
+        fineControlUI.SetVisible(interactionEnabled);
     }
 
     private void ApplyVisualRotationFromVoltage()

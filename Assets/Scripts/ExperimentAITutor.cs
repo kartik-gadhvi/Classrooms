@@ -9,7 +9,11 @@ public class ExperimentAITutor : MonoBehaviour
 
     private VRSpeechToText stt;
     private VRChatController chat;
+    private VRChatTTS tts;
     private GameObject recordingIndicator;
+    private RecordingIndicator recordingVisual;
+    private AITutorStateUI stateUI;
+    private bool quotaExceeded;
 
     private void Awake()
     {
@@ -28,26 +32,40 @@ public class ExperimentAITutor : MonoBehaviour
 
         chat = chatSetup.GetChatController();
         stt = chatSetup.GetSTTManager();
+        tts = chatSetup.GetTTSManager();
 
         if (stt != null)
         {
-            if (createRecordingIndicator && stt != null)
+            if (createRecordingIndicator)
                 EnsureRecordingIndicator();
 
             stt.OnRecordingStarted += OnRecordingStarted;
             stt.OnTranscriptionReceived += OnTranscriptionReceived;
+            stt.OnError += OnAiError;
             stt.SetListeningEnabled(tutorial != null && tutorial.IsTutorialSessionActive);
         }
+
+        if (chat != null)
+            chat.OnError += OnAiError;
+
+        if (tts != null)
+            tts.OnError += OnAiError;
 
         if (tutorial != null)
         {
             tutorial.SessionStarted += OnTutorialStarted;
             tutorial.SessionEnded += OnTutorialEnded;
             tutorial.StepShown += OnStepShown;
+            EnsureStateUI();
         }
 
         LanguageManager.Changed += ApplyLanguage;
         ApplyLanguage(LanguageManager.Current);
+    }
+
+    private void Update()
+    {
+        RefreshStateUI();
     }
 
     private void OnDestroy()
@@ -58,7 +76,14 @@ public class ExperimentAITutor : MonoBehaviour
         {
             stt.OnRecordingStarted -= OnRecordingStarted;
             stt.OnTranscriptionReceived -= OnTranscriptionReceived;
+            stt.OnError -= OnAiError;
         }
+
+        if (chat != null)
+            chat.OnError -= OnAiError;
+
+        if (tts != null)
+            tts.OnError -= OnAiError;
 
         if (tutorial != null)
         {
@@ -72,18 +97,23 @@ public class ExperimentAITutor : MonoBehaviour
     {
         chatSetup?.SetSystemPrompt(ExperimentStrings.AiSystemPrompt);
         chatSetup?.SetWhisperLanguage(ExperimentStrings.WhisperLanguage);
+        RefreshStateUI();
     }
 
     private void OnTutorialStarted()
     {
         ApplyLanguage(LanguageManager.Current);
-        stt?.SetListeningEnabled(true);
+        EnsureStateUI();
+        if (!quotaExceeded)
+            stt?.SetListeningEnabled(true);
+        RefreshStateUI();
     }
 
     private void OnTutorialEnded()
     {
         stt?.SetListeningEnabled(false);
         chatSetup?.StopSpeaking();
+        RefreshStateUI();
     }
 
     private void OnStepShown(int step)
@@ -97,14 +127,50 @@ public class ExperimentAITutor : MonoBehaviour
     {
         tutorial?.PauseNarration();
         chatSetup?.StopSpeaking();
+        recordingVisual?.SetRecording(true);
+        RefreshStateUI();
     }
 
     private void OnTranscriptionReceived(string text)
     {
-        if (chat == null || string.IsNullOrWhiteSpace(text))
+        if (chat == null || string.IsNullOrWhiteSpace(text) || quotaExceeded)
             return;
 
         chat.SetRequestContext(BuildExperimentContext());
+        RefreshStateUI();
+    }
+
+    private void OnAiError(string error)
+    {
+        if (!GroqQuotaGuard.IsQuotaOrRateLimit(error))
+            return;
+
+        quotaExceeded = true;
+        stt?.SetListeningEnabled(false);
+        chatSetup?.StopSpeaking();
+        RefreshStateUI();
+    }
+
+    private void RefreshStateUI()
+    {
+        if (stateUI == null)
+            return;
+
+        if (quotaExceeded || (chat != null && chat.QuotaExceeded))
+        {
+            quotaExceeded = true;
+            stateUI.SetState(AITutorState.Unavailable);
+            return;
+        }
+
+        if (stt != null && stt.IsRecording)
+            stateUI.SetState(AITutorState.Listening);
+        else if ((stt != null && stt.IsProcessing) || (chat != null && chat.IsProcessing) || (tts != null && tts.IsProcessing))
+            stateUI.SetState(AITutorState.Thinking);
+        else if (tts != null && tts.IsSpeaking)
+            stateUI.SetState(AITutorState.Speaking);
+        else
+            stateUI.SetState(AITutorState.Idle);
     }
 
     private string BuildExperimentContext()
@@ -146,6 +212,21 @@ public class ExperimentAITutor : MonoBehaviour
         return "publication result and closing";
     }
 
+    private void EnsureStateUI()
+    {
+        if (stateUI != null || tutorial == null || tutorial.dialogueRoot == null)
+            return;
+
+        var panel = tutorial.dialogueText != null
+            ? tutorial.dialogueText.transform.parent as RectTransform
+            : tutorial.dialogueRoot.GetComponent<RectTransform>();
+
+        if (panel == null)
+            return;
+
+        stateUI = AITutorStateUI.Create(panel, tutorial.dialogueText);
+    }
+
     private void EnsureRecordingIndicator()
     {
         Transform parent = FindHandAnchor("LeftHandAnchor");
@@ -171,8 +252,8 @@ public class ExperimentAITutor : MonoBehaviour
         if (meshRen != null)
             meshRen.material.color = new Color(1f, 0.15f, 0.15f, 1f);
 
-        var indicator = recordingIndicator.AddComponent<RecordingIndicator>();
-        indicator.SetRecording(false);
+        recordingVisual = recordingIndicator.AddComponent<RecordingIndicator>();
+        recordingVisual.SetRecording(false);
 
         var sttType = typeof(VRSpeechToText);
         var field = sttType.GetField("recordingIndicator", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);

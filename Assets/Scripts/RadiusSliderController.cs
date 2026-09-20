@@ -2,30 +2,31 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>
+/// Controls the droplet-radius task UI. The slider is driven natively by the
+/// Meta ISDK ray through the canvas event system (no manual raycasting),
+/// with -/+ step buttons for fine adjustment.
+/// </summary>
 public class RadiusSliderController : MonoBehaviour
 {
     [Header("UI")]
     public GameObject panelRoot;
     public Slider radiusSlider;
     public TMP_Text radiusText;
+    public UiRepeatButton minusButton;
+    public UiRepeatButton plusButton;
 
     [Header("Target")]
     public SpraySpawner spraySpawner;
-
-    [Header("Ray Control")]
-    public Transform rayOrigin;
-    public OVRInput.Button controlButton = OVRInput.Button.SecondaryIndexTrigger;
-    public bool allowRayControlOnlyDuringTask = true;
-    public bool invertRayDirection = false;
-    public float maxRayDistance = 5f;
-    public float hitPadding = 35f;
 
     [Header("Radius Settings")]
     public float minRadiusMicrometer = 0.3f;
     public float maxRadiusMicrometer = 2.0f;
     public float defaultRadiusMicrometer = 0.3f;
+    public float smallStepMicrometer = 0.01f;
 
     [Header("Behaviour")]
+    public bool applyOnlyDuringTask = true;
     public bool clearDropsWhenRadiusChanges = true;
     public bool enableTutorialRadiusModeOnStart = false;
     public bool hidePanelOnStart = false;
@@ -34,7 +35,6 @@ public class RadiusSliderController : MonoBehaviour
     public bool logRadiusTaskToSessionLogger = true;
 
     private bool isActiveForTask;
-    private RectTransform sliderRect;
     private float lastAppliedRadius = -999f;
 
     private void Awake()
@@ -45,10 +45,18 @@ public class RadiusSliderController : MonoBehaviour
         if (radiusSlider == null)
             radiusSlider = GetComponentInChildren<Slider>(true);
 
+        // Re-apply the theme at runtime: the slider subtree lives inside a prefab
+        // instance whose serialized style overrides are unreliable.
         if (radiusSlider != null)
-            sliderRect = radiusSlider.GetComponent<RectTransform>();
+            UiTheme.StyleSlider(radiusSlider, 26f, 10f);
 
         SetupSlider();
+
+        if (minusButton != null)
+            minusButton.onStep.AddListener(() => NudgeRadius(-smallStepMicrometer));
+
+        if (plusButton != null)
+            plusButton.onStep.AddListener(() => NudgeRadius(smallStepMicrometer));
     }
 
     private void OnEnable()
@@ -73,14 +81,14 @@ public class RadiusSliderController : MonoBehaviour
             panelRoot.SetActive(false);
 
         if (enableTutorialRadiusModeOnStart)
+        {
             StartRadiusTask();
+        }
         else
+        {
             isActiveForTask = false;
-    }
-
-    private void Update()
-    {
-        UpdateRayControl();
+            SetControlsInteractable(false);
+        }
     }
 
     private void SetupSlider()
@@ -106,9 +114,7 @@ public class RadiusSliderController : MonoBehaviour
         if (panelRoot != null)
             panelRoot.SetActive(true);
 
-        if (radiusSlider != null)
-            radiusSlider.interactable = true;
-
+        SetControlsInteractable(true);
         SetRadius(defaultRadiusMicrometer, true);
     }
 
@@ -116,8 +122,7 @@ public class RadiusSliderController : MonoBehaviour
     {
         isActiveForTask = false;
 
-        if (radiusSlider != null)
-            radiusSlider.interactable = false;
+        SetControlsInteractable(false);
 
         if (spraySpawner != null)
             spraySpawner.ReturnToRandomModeAndClearDrops();
@@ -125,7 +130,6 @@ public class RadiusSliderController : MonoBehaviour
         if (panelRoot != null && hidePanelOnStart)
             panelRoot.SetActive(false);
 
-        // --- Logging: Radius-Aufgabe abgeschlossen ---
         if (logRadiusTaskToSessionLogger && SessionLogger.Instance != null)
             SessionLogger.Instance.MarkRadiusTaskCompleted();
     }
@@ -135,59 +139,15 @@ public class RadiusSliderController : MonoBehaviour
         return radiusSlider != null ? radiusSlider.value : defaultRadiusMicrometer;
     }
 
-    private void UpdateRayControl()
+    public void NudgeRadius(float delta)
     {
-        if (allowRayControlOnlyDuringTask && !isActiveForTask)
+        if (radiusSlider == null)
             return;
 
-        if (rayOrigin == null || radiusSlider == null)
+        if (applyOnlyDuringTask && !isActiveForTask)
             return;
 
-        if (!OVRInput.Get(controlButton))
-            return;
-
-        if (sliderRect == null)
-            sliderRect = radiusSlider.GetComponent<RectTransform>();
-
-        Vector3 direction = invertRayDirection ? -rayOrigin.forward : rayOrigin.forward;
-        Ray ray = new Ray(rayOrigin.position, direction);
-        Plane plane = new Plane(sliderRect.forward, sliderRect.position);
-
-        if (!plane.Raycast(ray, out float distance))
-            return;
-
-        if (distance < 0f || distance > maxRayDistance)
-            return;
-
-        Vector3 hitWorld = ray.GetPoint(distance);
-        Vector2 localPoint = sliderRect.InverseTransformPoint(hitWorld);
-        Rect rect = sliderRect.rect;
-
-        Rect paddedRect = new Rect(
-            rect.xMin - hitPadding,
-            rect.yMin - hitPadding,
-            rect.width + hitPadding * 2f,
-            rect.height + hitPadding * 2f
-        );
-
-        if (!paddedRect.Contains(localPoint))
-            return;
-
-        float normalized = Mathf.InverseLerp(rect.xMin, rect.xMax, localPoint.x);
-        normalized = Mathf.Clamp01(normalized);
-
-        float radius = Mathf.Lerp(radiusSlider.minValue, radiusSlider.maxValue, normalized);
-        SetRadius(radius, clearDropsWhenRadiusChanges);
-    }
-
-    private void OnSliderValueChanged(float value)
-    {
-        UpdateRadiusText(value);
-
-        if (allowRayControlOnlyDuringTask && !isActiveForTask)
-            return;
-
-        ApplyRadiusToSprayer(value, clearDropsWhenRadiusChanges);
+        SetRadius(radiusSlider.value + delta, clearDropsWhenRadiusChanges);
     }
 
     public void SetRadius(float radiusMicrometer, bool clearExistingDrops)
@@ -199,6 +159,28 @@ public class RadiusSliderController : MonoBehaviour
 
         UpdateRadiusText(radius);
         ApplyRadiusToSprayer(radius, clearExistingDrops);
+    }
+
+    private void SetControlsInteractable(bool interactable)
+    {
+        if (radiusSlider != null)
+            radiusSlider.interactable = interactable;
+
+        if (minusButton != null)
+            minusButton.Button.interactable = interactable;
+
+        if (plusButton != null)
+            plusButton.Button.interactable = interactable;
+    }
+
+    private void OnSliderValueChanged(float value)
+    {
+        UpdateRadiusText(value);
+
+        if (applyOnlyDuringTask && !isActiveForTask)
+            return;
+
+        ApplyRadiusToSprayer(value, clearDropsWhenRadiusChanges);
     }
 
     private void ApplyRadiusToSprayer(float radius, bool clearExistingDrops)
@@ -218,6 +200,6 @@ public class RadiusSliderController : MonoBehaviour
     private void UpdateRadiusText(float radius)
     {
         if (radiusText != null)
-            radiusText.text = ExperimentStrings.RadiusSlider(radius.ToString("0.00") + " \u00B5m");
+            radiusText.text = ExperimentStrings.RadiusSlider(radius.ToString("0.00") + " µm");
     }
 }

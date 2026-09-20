@@ -266,13 +266,40 @@ public static class ExperimentStrings
             "Task:\n\nr = " + target + " µm → " + label + "\n\nSet the radius with the left controller.\nUse the left trigger on the slider.\nThen create oil droplets with the right trigger on the atomizer.");
     }
 
+    public static string ChoiceYes => Pick("Ja", "Yes");
+    public static string ChoiceNo => Pick("Nein", "No");
+    public static string ChoiceRepeat => Pick("Wiederholen", "Repeat");
+
+    public static string AiIdle => Pick("Y halten: KI fragen", "Hold Y: ask AI");
+    public static string AiListening => Pick("KI hört zu…", "AI is listening…");
+    public static string AiThinking => Pick("KI denkt nach…", "AI is thinking…");
+    public static string AiSpeaking => Pick("KI spricht…", "AI is speaking…");
+    public static string AiUnavailable => Pick("KI nicht verfügbar (Kontingent). Tutorial weiter nutzen.", "AI unavailable (quota). Continue the tutorial.");
+
+    public static string HelpDeclined => Pick(
+        "Ich kann den Versuch nicht allein durchführen.\nWenn du bereit bist, drücke Ja.",
+        "I cannot run this experiment alone.\nPress Yes when you are ready to help.");
+
+    public static bool IsQuestionStep(int step)
+    {
+        return step == 1 || step == 2 || step == 3 || step == 50;
+    }
+
+    public static bool IsHelpRequestStep(int step)
+    {
+        return step == 3;
+    }
+
     public static string ButtonHint(int step, bool isSkip, bool isBlocking, bool radiusIncomplete)
     {
         string aiHint = Pick("Y halten: KI fragen", "Hold Y: ask AI");
+        string repeatHint = Pick("X: Wiederholen", "X: Repeat");
         string hint;
 
-        if (step == 3)
-            hint = Pick("A: Ja, ich helfe dir!", "A: Yes, I will help you!");
+        if (IsHelpRequestStep(step))
+            hint = Pick("A: Ja    B: Nein", "A: Yes    B: No");
+        else if (IsQuestionStep(step))
+            hint = Pick("A: Ja    B: Nein    oder A: Weiter", "A: Yes    B: No    or A: Continue");
         else if (isSkip)
             hint = Pick("A: Weiter    B: Abschnitt überspringen", "A: Continue    B: Skip section");
         else if (isBlocking)
@@ -282,10 +309,8 @@ public static class ExperimentStrings
         else
             hint = Pick("A: Weiter", "A: Continue");
 
-        if (string.IsNullOrEmpty(hint))
-            return aiHint;
-
-        return hint + "    " + aiHint;
+        string extra = string.IsNullOrEmpty(hint) ? repeatHint : hint + "    " + repeatHint;
+        return extra + "    " + aiHint;
     }
 
     public static string GuideSprayer() => Pick(
@@ -315,8 +340,8 @@ public static class ExperimentStrings
         "Select a droplet\n\nController: right controller\nButton: right trigger\nAction: select an oil droplet with the red beam.");
 
     public static string GuideVoltageTask() => Pick(
-        "Schwebezustand\n\nController: linker Controller\nTaste: mittlere Griff-Taste\nAktion: Hand langsam nach links oder rechts bewegen\nFeineinstellung: zusätzlich X-Taste gedrückt halten\n\nZiel: Tröpfchen soll weder steigen noch fallen.",
-        "Hovering state\n\nController: left controller\nButton: middle grip button\nAction: move your hand slowly left or right\nFine tuning: also hold the X button\n\nGoal: the droplet should neither rise nor fall.");
+        "Schwebezustand\n\nGrobeinstellung: Spannungsregler greifen und die Hand bewegen.\nFeineinstellung: Slider oder + / − (linker Trigger).\nHalten von + / − ändert die Spannung in 1-V-Schritten.\n\nZiel: Tröpfchen soll weder steigen noch fallen.",
+        "Hovering state\n\nCoarse: grab the voltage knob and move your hand.\nFine: use the slider or the + / − buttons (left trigger).\nHold + / − to change voltage in 1 V steps.\n\nGoal: the droplet should neither rise nor fall.");
 
     public static string GuideElectricFormula() => Pick(
         "Kräftegleichgewicht\n\nF_el = F_G\nF_el = q * E\nE = U / d\nq = m * g * d / U",

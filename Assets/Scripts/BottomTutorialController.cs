@@ -90,6 +90,8 @@ public class BottomTutorialController : MonoBehaviour
     private readonly float[] radiusTargets = { 0.5f, 1.0f, 1.5f };
 
     private const int LastStepIndex = 66;
+    private TutorialChoiceUI choiceUI;
+    private bool helpDeclined;
 
     private void Start()
     {
@@ -111,6 +113,8 @@ public class BottomTutorialController : MonoBehaviour
             dialogueRoot.SetActive(false);
 
         LanguageManager.Changed += OnLanguageChanged;
+        choiceUI = TutorialChoiceUI.Ensure(this);
+        choiceUI?.Bind(this);
     }
 
     private void OnDestroy()
@@ -136,10 +140,18 @@ public class BottomTutorialController : MonoBehaviour
             UpdateRadiusTask();
 
         if (OVRInput.GetDown(OVRInput.Button.One))
-            TryAdvanceWithAButton();
+            AnswerYes();
 
         if (OVRInput.GetDown(OVRInput.Button.Two))
-            TrySkipSectionWithBButton();
+        {
+            if (ExperimentStrings.IsQuestionStep(currentStep) && !IsSkipStep(currentStep))
+                AnswerNo();
+            else
+                TrySkipSectionWithBButton();
+        }
+
+        if (OVRInput.GetDown(OVRInput.Button.Three) && !IsVoltageKnobGrabbed())
+            ReplayCurrentExplanation();
     }
 
     public void BeginTutorialSession()
@@ -192,6 +204,7 @@ public class BottomTutorialController : MonoBehaviour
         currentStep = 0;
         measurementsCompleted = 0;
         firstMeasurementExplanationShown = false;
+        helpDeclined = false;
 
         radiusTaskIndex = -1;
         radiusTaskRadiusCorrect = false;
@@ -201,6 +214,46 @@ public class BottomTutorialController : MonoBehaviour
 
         if (measurementRecorder != null)
             measurementRecorder.ClearMeasurements();
+    }
+
+    public void AnswerYes()
+    {
+        helpDeclined = false;
+        TryAdvanceWithAButton();
+    }
+
+    public void AnswerNo()
+    {
+        if (!tutorialSessionActive)
+            return;
+
+        if (ExperimentStrings.IsHelpRequestStep(currentStep))
+        {
+            helpDeclined = true;
+            RefreshCurrentText();
+            PlayVoiceForCurrentStep();
+            return;
+        }
+
+        if (ExperimentStrings.IsQuestionStep(currentStep))
+        {
+            helpDeclined = false;
+            TryAdvanceWithAButton();
+        }
+    }
+
+    public void ReplayCurrentExplanation()
+    {
+        if (!tutorialSessionActive)
+            return;
+
+        RefreshCurrentText();
+        PlayVoiceForCurrentStep();
+    }
+
+    private bool IsVoltageKnobGrabbed()
+    {
+        return voltageKnobInput != null && voltageKnobInput.IsGrabbed;
     }
 
     private void TryAdvanceWithAButton()
@@ -267,6 +320,8 @@ public class BottomTutorialController : MonoBehaviour
 
     private void NextStep()
     {
+        helpDeclined = false;
+
         if (currentStep < LastStepIndex)
         {
             currentStep++;
@@ -290,10 +345,18 @@ public class BottomTutorialController : MonoBehaviour
     private void RefreshCurrentText()
     {
         if (dialogueText != null)
-            dialogueText.text = GetDialogueForCurrentStep();
+        {
+            if (helpDeclined && ExperimentStrings.IsHelpRequestStep(currentStep))
+                dialogueText.text = ExperimentStrings.HelpDeclined;
+            else
+                dialogueText.text = GetDialogueForCurrentStep();
+        }
 
         if (buttonHintText != null)
             buttonHintText.text = GetButtonHintForCurrentStep();
+
+        bool question = ExperimentStrings.IsQuestionStep(currentStep);
+        choiceUI?.Refresh(question, question);
     }
 
     private void RefreshGuideForCurrentStep()
