@@ -1,0 +1,135 @@
+step	language	clip	text
+0	de	Assets/Material/MillikanWav/millikan_00.wav	Ah. Ein Klassenzimmer. Gut. Das kenne ich. Mein Name ist Robert Andrews Millikan. Ich war Physikprofessor in Chicago und später am California Institute of Technology.
+1	de	Assets/Material/MillikanWav/millikan_01.wav	Ich habe eine Frage — und ich brauche jemanden, der mir hilft. Ist elektrische Ladung unteilbar?
+2	de	Assets/Material/MillikanWav/millikan_02.wav	Gibt es ein kleinstes elektrisches Paket? Oder fließt Elektrizität kontinuierlich, wie Wasser durch einen Schlauch?
+3	de	Assets/Material/MillikanWav/millikan_03.wav	Ich habe ein Experiment gebaut, das diese Frage beantworten kann. Aber ich kann es nicht alleine durchführen. Dazu brauche ich einen Assistenten — wie dich.
+4	de	Assets/Material/MillikanWav/millikan_04.wav	Ausgezeichnet. Dann legen wir los. Komm zum Experiment — ich zeige dir, womit wir es zu tun haben.
+5	de	Assets/Material/MillikanWav/millikan_05.wav	Ich bin 1868 in Morrison, Illinois geboren. Physik hat mich schon immer fasziniert: Was ist Materie? Was ist Elektrizität?
+6	de	Assets/Material/MillikanWav/millikan_06.wav	1909 haben Harvey Fletcher und ich begonnen, diesen Apparat zu entwickeln.
+7	de	Assets/Material/MillikanWav/millikan_07.wav	Fletcher hatte die entscheidende Idee: Statt Wasser verwenden wir Öl. Öltröpfchen bleiben viel länger stabil.
+8	de	Assets/Material/MillikanWav/millikan_08.wav	J. J. Thomson hatte gezeigt, dass es Elektronen gibt. Aber wie groß ist ihre Ladung? Genau das wollte ich messen.
+9	de	Assets/Material/MillikanWav/millikan_09.wav	Heute erfährst du, wie dieses Experiment funktioniert und wie man damit die Elementarladung bestimmt.
+10	de	Assets/Material/MillikanWav/millikan_10.wav	Hier ist mein Apparat. Fünf Dinge arbeiten zusammen. Ich erkläre dir jede Komponente.
+11	de	Assets/Material/MillikanWav/millikan_11.wav	Der Zerstäuber ist der Anfang. Er erzeugt viele kleine Öltröpfchen. Durch Reibung werden einige davon elektrisch geladen.
+12	de	Assets/Material/MillikanWav/millikan_12.wav	Die Tröpfchen sind sehr klein. Das Mikroskop macht sie sichtbar. Aber es spiegelt das Bild.
+13	de	Assets/Material/MillikanWav/millikan_13.wav	In dieser Simulation sehen wir direkt, ob die Öltröpfchen sinken oder steigen.
+14	de	Assets/Material/MillikanWav/millikan_14.wav	Das Licht kommt von der Seite. Die Tröpfchen streuen das Licht und werden dadurch sichtbar.
+15	de	Assets/Material/MillikanWav/millikan_15.wav	Das Herzstück sind zwei Metallplatten. Sie sind 6 Millimeter voneinander entfernt. Zwischen ihnen entsteht ein elektrisches Feld.
+16	de	Assets/Material/MillikanWav/millikan_16.wav	Mit dem Spannungsregler veränderst du das Feld. Wenn die Spannung steigt, wird die elektrische Kraft stärker.
+17	de	Assets/Material/MillikanWav/millikan_17.wav	Aufgabe: Zerstäuber benutzen. Ziele mit dem rechten Controller auf den Zerstäuber. Drücke den rechten Trigger, um Öltröpfchen zu erzeugen.
+18	de	Assets/Material/MillikanWav/millikan_18.wav	Die Tröpfchen fallen. Langsam — aber sie fallen. Die Schwerkraft zieht sie nach unten.
+19	de	Assets/Material/MillikanWav/millikan_19.wav	Aus der Fallgeschwindigkeit können wir den Radius r bestimmen. Größere Tröpfchen fallen schneller.
+20	de	Assets/Material/MillikanWav/millikan_20.wav	Die Dichte des Öls kennen wir. Die Erdbeschleunigung kennen wir auch. Was fehlt, ist der Radius.
+21	de	Assets/Material/MillikanWav/millikan_21.wav	Den Radius messen wir aus der Fallbewegung. Das ist der erste wichtige Schritt.
+22	de	Assets/Material/MillikanWav/millikan_22.wav	Schau auf die Formel im GuideUI. Dort siehst du die bekannten Werte.
+23	de	Assets/Material/MillikanWav/millikan_23.wav	Ein Slider erscheint. Er steuert die Tröpfchengröße r. Links: 0,3 Mikrometer. Rechts: 2,0 Mikrometer.
+24	de	Assets/Material/MillikanWav/millikan_24.wav	Bewege den Slider. Kleinere Tröpfchen fallen langsamer. Größere Tröpfchen fallen schneller.
+25	de	Assets/Material/MillikanWav/millikan_25.wav	Aufgabe: r gleich 0,5 Mikrometer – sehr langsam fallend. Stelle den Radius mit dem linken Controller ein. Benutze den linken Trigger am Slider. Erzeuge danach Öltröpfchen mit dem rechten Trigger am Zerstäuber.
+26	de	Assets/Material/MillikanWav/millikan_26.wav	Aufgabe: r gleich 1,0 Mikrometer – mittlere Geschwindigkeit. Stelle den Radius mit dem linken Controller ein. Benutze den linken Trigger am Slider. Erzeuge danach Öltröpfchen mit dem rechten Trigger am Zerstäuber.
+27	de	Assets/Material/MillikanWav/millikan_27.wav	Aufgabe: r gleich 1,5 Mikrometer – schnell fallend. Stelle den Radius mit dem linken Controller ein. Benutze den linken Trigger am Slider. Erzeuge danach Öltröpfchen mit dem rechten Trigger am Zerstäuber.
+28	de	Assets/Material/MillikanWav/millikan_28.wav	Gut. Du siehst jetzt: Der Radius bestimmt die Fallgeschwindigkeit. Jetzt kommt der eigentliche Messschritt.
+29	de	Assets/Material/MillikanWav/millikan_29.wav	Nun betrachten wir das elektrische Feld. Wenn die Spannung steigt, wirkt eine elektrische Kraft auf das geladene Tröpfchen.
+30	de	Assets/Material/MillikanWav/millikan_30.wav	Diese Kraft heißt Coulomb-Kraft. Je höher die Spannung, desto stärker wird sie.
+31	de	Assets/Material/MillikanWav/millikan_31.wav	Der grüne Pfeil zeigt die elektrische Kraft. Wenn die Spannung steigt, wächst dieser Pfeil.
+32	de	Assets/Material/MillikanWav/millikan_32.wav	Wenn die Spannung passend ist, kann das Tröpfchen schweben. Dann gleichen sich die Kräfte aus.
+33	de	Assets/Material/MillikanWav/millikan_33.wav	Aufgabe: Neues Öltröpfchen erzeugen. Ziele mit dem rechten Controller auf den Zerstäuber. Drücke den rechten Trigger.
+34	de	Assets/Material/MillikanWav/millikan_34.wav	Aufgabe: Öltröpfchen auswählen. Ziele mit dem roten Strahl des rechten Controllers auf ein Tröpfchen. Drücke den rechten Trigger.
+35	de	Assets/Material/MillikanWav/millikan_35.wav	Aufgabe: Tröpfchen zum Schweben bringen. Greife den Spannungsregler mit dem linken Controller. Bewege die Hand langsam nach links oder rechts, bis das Tröpfchen weder deutlich steigt noch fällt.
+36	de	Assets/Material/MillikanWav/millikan_36.wav	Das war deine erste Ladungsmessung. Aber eine Messung ist nur ein Datenpunkt. Wir brauchen ein Muster.
+37	de	Assets/Material/MillikanWav/millikan_37.wav	Schau auf das GuideUI. Dort siehst du das Kräftegleichgewicht.
+38	de	Assets/Material/MillikanWav/millikan_38.wav	Wenn das Tröpfchen schwebt, ist die elektrische Kraft gleich der Gewichtskraft. Damit berechnen wir die Ladung q.
+39	de	Assets/Material/MillikanWav/millikan_39.wav	Auf dem Parameterpanel siehst du die Größen, die wir für die Berechnung brauchen.
+40	de	Assets/Material/MillikanWav/millikan_40.wav	Wir brauchen mehrere Datenpunkte. Bringe noch vier weitere Tröpfchen nacheinander zum Schweben.
+41	de	Assets/Material/MillikanWav/millikan_41.wav	Alle fünf Messungen sind abgeschlossen. Schau dir nun das Histogramm an.
+42	de	Assets/Material/MillikanWav/millikan_42.wav	Ich habe nicht nur ein Tröpfchen gemessen. Ich habe viele gemessen — über Monate.
+43	de	Assets/Material/MillikanWav/millikan_43.wav	Die Ladungen waren nicht zufällig verteilt. Sie lagen immer nahe bei denselben Werten.
+44	de	Assets/Material/MillikanWav/millikan_44.wav	Diese Werte sind Vielfache einer kleinsten Einheit. Das ist die Elementarladung e.
+45	de	Assets/Material/MillikanWav/millikan_45.wav	Deine Messwerte zeigen dasselbe Muster: Die Ladungen häufen sich bei ganzzahligen Vielfachen.
+46	de	Assets/Material/MillikanWav/millikan_46.wav	Das ist Ladungsquantisierung. Elektrische Ladung kommt in Paketen.
+47	de	Assets/Material/MillikanWav/millikan_47.wav	Ich muss dir etwas zeigen. 1978 entdeckte Gerald Holton meine Original-Notizbücher.
+48	de	Assets/Material/MillikanWav/millikan_48.wav	Er fand heraus, dass ich mehr Tröpfchen gemessen hatte, als ich veröffentlicht habe.
+49	de	Assets/Material/MillikanWav/millikan_49.wav	Neben manchen Datenpunkten standen Anmerkungen: 'Won't work', 'Schiefe Messung', 'Error — discard'.
+50	de	Assets/Material/MillikanWav/millikan_50.wav	War das falsch? Ich glaube: Nein. Ich habe Messungen mit technischen Fehlern ausgeschlossen.
+51	de	Assets/Material/MillikanWav/millikan_51 .wav	Das ist kein Betrug. Das ist Urteilsvermögen.
+52	de	Assets/Material/MillikanWav/millikan_52 .wav	Allan Franklin zeigte 1981: Die weggelassenen Daten hätten den Endwert kaum verändert.
+53	de	Assets/Material/MillikanWav/millikan_53.wav	Die statistische Unsicherheit wäre größer geworden, aber das Ergebnis wäre fast gleich geblieben.
+54	de	Assets/Material/MillikanWav/millikan_54 .wav	Die Selektion verbesserte die Präzision, aber nicht das Ergebnis.
+55	de	Assets/Material/MillikanWav/millikan_55 .wav	Datenselektion beschäftigt Wissenschaftler bis heute. Eine klare Anforderung bleibt: Transparenz.
+56	de	Assets/Material/MillikanWav/millikan_56 .wav	Was ausgeschlossen wird — und warum — muss dokumentiert sein.
+57	de	Assets/Material/MillikanWav/millikan_57 .wav	Damit hast du gesehen: Nicht nur der Messwert zählt, sondern auch der Umgang mit Daten.
+58	de	Assets/Material/MillikanWav/millikan_58 .wav	1913 veröffentlichte ich meinen Endwert: e gleich 1,592 mal 10 hoch minus 19 Coulomb. Unsicherheit: 0,2 Prozent.
+59	de	Assets/Material/MillikanWav/millikan_59.wav	Das war damals die genaueste Messung der Elementarladung. Der heutige Wert ist 1,602 mal 10 hoch minus 19 Coulomb.
+60	de	Assets/Material/MillikanWav/millikan_60.wav	Die Abweichung lag an einem leicht falschen Wert für die Luftviskosität. Nicht an der Methode.
+61	de	Assets/Material/MillikanWav/millikan_61.wav	Der eigentliche Beitrag ist nicht nur die Zahl. Es ist das Prinzip: Elektrische Ladung ist gequantelt.
+62	de	Assets/Material/MillikanWav/millikan_62.wav	Es gibt keine halbe Elementarladung. Keine viertel Elementarladung. Die Natur zählt in ganzen Zahlen.
+63	de	Assets/Material/MillikanWav/millikan_63.wav	Das ist eine fundamentale Struktur der Materie.
+64	de	Assets/Material/MillikanWav/millikan_64.wav	Seit 1995 wurden über hundert Millionen Öltropfen vermessen. Es gab keinen Hinweis auf Bruchladungen.
+65	de	Assets/Material/MillikanWav/millikan_65.wav	Auch deine Messungen zeigen dieses Muster: Ladungen treten als Vielfache von e auf.
+66	de	Assets/Material/MillikanWav/millikan_66.wav	Danke für deine Hilfe. Jetzt folgt derselbe Wissenstest noch einmal. Dieses Mal bekommst du Feedback zu deinen Antworten.
+0	en	Assets/Material/MillikanWav_en/millikan_00.wav	Ah. A classroom. Good. I know this. My name is Robert Andrews Millikan. I was a physics professor in Chicago and later at the California Institute of Technology.
+1	en	Assets/Material/MillikanWav_en/millikan_01.wav	I have a question — and I need someone to help me. Is electric charge indivisible?
+2	en	Assets/Material/MillikanWav_en/millikan_02.wav	Is there a smallest packet of electricity? Or does electricity flow continuously, like water through a hose?
+3	en	Assets/Material/MillikanWav_en/millikan_03.wav	I built an experiment that can answer this question. But I cannot run it alone. I need an assistant — like you.
+4	en	Assets/Material/MillikanWav_en/millikan_04.wav	Excellent. Then let's begin. Come to the experiment — I will show you what we are working with.
+5	en	Assets/Material/MillikanWav_en/millikan_05.wav	I was born in 1868 in Morrison, Illinois. Physics has always fascinated me: What is matter? What is electricity?
+6	en	Assets/Material/MillikanWav_en/millikan_06.wav	In 1909, Harvey Fletcher and I began developing this apparatus.
+7	en	Assets/Material/MillikanWav_en/millikan_07.wav	Fletcher had the decisive idea: instead of water, we use oil. Oil droplets stay stable much longer.
+8	en	Assets/Material/MillikanWav_en/millikan_08.wav	J. J. Thomson had shown that electrons exist. But how large is their charge? That is exactly what I wanted to measure.
+9	en	Assets/Material/MillikanWav_en/millikan_09.wav	Today you will learn how this experiment works and how it is used to determine the elementary charge.
+10	en	Assets/Material/MillikanWav_en/millikan_10.wav	Here is my apparatus. Five things work together. I will explain each component to you.
+11	en	Assets/Material/MillikanWav_en/millikan_11.wav	The atomizer is the beginning. It creates many small oil droplets. Friction electrically charges some of them.
+12	en	Assets/Material/MillikanWav_en/millikan_12.wav	The droplets are very small. The microscope makes them visible. But it flips the image.
+13	en	Assets/Material/MillikanWav_en/millikan_13.wav	In this simulation we see directly whether the oil droplets sink or rise.
+14	en	Assets/Material/MillikanWav_en/millikan_14.wav	The light comes from the side. The droplets scatter the light and become visible that way.
+15	en	Assets/Material/MillikanWav_en/millikan_15.wav	The heart of it is two metal plates. They are 6 millimeters apart. An electric field forms between them.
+16	en	Assets/Material/MillikanWav_en/millikan_16.wav	With the voltage knob you change the field. When the voltage rises, the electric force becomes stronger.
+17	en	Assets/Material/MillikanWav_en/millikan_17.wav	Task: Use the atomizer. Aim the right controller at the atomizer. Press the right trigger to create oil droplets.
+18	en	Assets/Material/MillikanWav_en/millikan_18.wav	The droplets fall. Slowly — but they fall. Gravity pulls them downward.
+19	en	Assets/Material/MillikanWav_en/millikan_19.wav	From the falling speed we can determine the radius r. Larger droplets fall faster.
+20	en	Assets/Material/MillikanWav_en/millikan_20.wav	We know the density of the oil. We also know the acceleration due to gravity. What is missing is the radius.
+21	en	Assets/Material/MillikanWav_en/millikan_21.wav	We measure the radius from the falling motion. That is the first important step.
+22	en	Assets/Material/MillikanWav_en/millikan_22.wav	Look at the formula in the guide. There you will see the known values.
+23	en	Assets/Material/MillikanWav_en/millikan_23.wav	A slider appears. It controls the droplet size r. Left: 0.3 micrometers. Right: 2.0 micrometers.
+24	en	Assets/Material/MillikanWav_en/millikan_24.wav	Move the slider. Smaller droplets fall more slowly. Larger droplets fall faster.
+25	en	Assets/Material/MillikanWav_en/millikan_25.wav	Task: r equals 0.5 micrometers – falling very slowly. Set the radius with the left controller. Use the left trigger on the slider. Then create oil droplets with the right trigger on the atomizer.
+26	en	Assets/Material/MillikanWav_en/millikan_26.wav	Task: r equals 1.0 micrometers – medium speed. Set the radius with the left controller. Use the left trigger on the slider. Then create oil droplets with the right trigger on the atomizer.
+27	en	Assets/Material/MillikanWav_en/millikan_27.wav	Task: r equals 1.5 micrometers – falling quickly. Set the radius with the left controller. Use the left trigger on the slider. Then create oil droplets with the right trigger on the atomizer.
+28	en	Assets/Material/MillikanWav_en/millikan_28.wav	Good. You can see now: the radius determines the falling speed. Now comes the actual measurement step.
+29	en	Assets/Material/MillikanWav_en/millikan_29.wav	Now we look at the electric field. When the voltage rises, an electric force acts on the charged droplet.
+30	en	Assets/Material/MillikanWav_en/millikan_30.wav	This force is called the Coulomb force. The higher the voltage, the stronger it becomes.
+31	en	Assets/Material/MillikanWav_en/millikan_31.wav	The green arrow shows the electric force. When the voltage rises, this arrow grows.
+32	en	Assets/Material/MillikanWav_en/millikan_32.wav	When the voltage is right, the droplet can hover. Then the forces balance.
+33	en	Assets/Material/MillikanWav_en/millikan_33.wav	Task: Create a new oil droplet. Aim the right controller at the atomizer. Press the right trigger.
+34	en	Assets/Material/MillikanWav_en/millikan_34.wav	Task: Select an oil droplet. Aim the red beam of the right controller at a droplet. Press the right trigger.
+35	en	Assets/Material/MillikanWav_en/millikan_35.wav	Task: Make the droplet hover. Grab the voltage knob with the left controller. Move your hand slowly left or right until the droplet neither clearly rises nor falls.
+36	en	Assets/Material/MillikanWav_en/millikan_36.wav	That was your first charge measurement. But one measurement is only a data point. We need a pattern.
+37	en	Assets/Material/MillikanWav_en/millikan_37.wav	Look at the guide. There you will see the force balance.
+38	en	Assets/Material/MillikanWav_en/millikan_38.wav	When the droplet hovers, the electric force equals the gravitational force. From that we calculate the charge q.
+39	en	Assets/Material/MillikanWav_en/millikan_39.wav	On the parameter panel you see the quantities we need for the calculation.
+40	en	Assets/Material/MillikanWav_en/millikan_40.wav	We need several data points. Make four more droplets hover, one after another.
+41	en	Assets/Material/MillikanWav_en/millikan_41.wav	All five measurements are complete. Now look at the histogram.
+42	en	Assets/Material/MillikanWav_en/millikan_42.wav	I did not measure only one droplet. I measured many — over months.
+43	en	Assets/Material/MillikanWav_en/millikan_43.wav	The charges were not randomly distributed. They always lay close to the same values.
+44	en	Assets/Material/MillikanWav_en/millikan_44.wav	These values are multiples of a smallest unit. That is the elementary charge e.
+45	en	Assets/Material/MillikanWav_en/millikan_45.wav	Your measurements show the same pattern: the charges cluster at integer multiples.
+46	en	Assets/Material/MillikanWav_en/millikan_46.wav	That is charge quantization. Electric charge comes in packets.
+47	en	Assets/Material/MillikanWav_en/millikan_47.wav	I have to show you something. In 1978 Gerald Holton discovered my original notebooks.
+48	en	Assets/Material/MillikanWav_en/millikan_48.wav	He found that I had measured more droplets than I published.
+49	en	Assets/Material/MillikanWav_en/millikan_49.wav	Next to some data points there were notes: 'Won't work', 'skewed measurement', 'Error — discard'.
+50	en	Assets/Material/MillikanWav_en/millikan_50.wav	Was that wrong? I believe: no. I excluded measurements with technical errors.
+51	en	Assets/Material/MillikanWav_en/millikan_51.wav	That is not fraud. That is judgment.
+52	en	Assets/Material/MillikanWav_en/millikan_52.wav	Allan Franklin showed in 1981: the omitted data would barely have changed the final value.
+53	en	Assets/Material/MillikanWav_en/millikan_53.wav	The statistical uncertainty would have grown, but the result would have stayed almost the same.
+54	en	Assets/Material/MillikanWav_en/millikan_54.wav	The selection improved the precision, but not the result.
+55	en	Assets/Material/MillikanWav_en/millikan_55.wav	Data selection still occupies scientists today. One clear requirement remains: transparency.
+56	en	Assets/Material/MillikanWav_en/millikan_56.wav	What is excluded — and why — must be documented.
+57	en	Assets/Material/MillikanWav_en/millikan_57.wav	So you have seen: it is not only the measured value that counts, but also how the data are handled.
+58	en	Assets/Material/MillikanWav_en/millikan_58.wav	In 1913 I published my final value: e equals 1.592 times 10 to the power of minus 19 coulomb. Uncertainty: 0.2 percent.
+59	en	Assets/Material/MillikanWav_en/millikan_59.wav	That was then the most precise measurement of the elementary charge. Today's value is 1.602 times 10 to the power of minus 19 coulomb.
+60	en	Assets/Material/MillikanWav_en/millikan_60.wav	The deviation came from a slightly wrong value for the viscosity of air. Not from the method.
+61	en	Assets/Material/MillikanWav_en/millikan_61.wav	The real contribution is not only the number. It is the principle: electric charge is quantized.
+62	en	Assets/Material/MillikanWav_en/millikan_62.wav	There is no half elementary charge. No quarter elementary charge. Nature counts in whole numbers.
+63	en	Assets/Material/MillikanWav_en/millikan_63.wav	That is a fundamental structure of matter.
+64	en	Assets/Material/MillikanWav_en/millikan_64.wav	Since 1995, more than one hundred million oil drops have been measured. There was no evidence of fractional charges.
+65	en	Assets/Material/MillikanWav_en/millikan_65.wav	Your measurements show this pattern too: charges appear as multiples of e.
+66	en	Assets/Material/MillikanWav_en/millikan_66.wav	Thank you for your help. Now the same knowledge test follows once more. This time you will get feedback on your answers.
