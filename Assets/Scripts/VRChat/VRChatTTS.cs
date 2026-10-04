@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -38,13 +39,24 @@ namespace VRChat
         Warm            // Comforting and welcoming
     }
 
+    public enum TTSProvider
+    {
+        ElevenLabs, // same voice as the narration (TutorVoiceProfile)
+        Groq        // Orpheus, English only; fallback
+    }
+
     /// <summary>
     /// VR Chat TTS Manager - Handles text-to-speech for AI responses
     /// Features: Audio queuing, speaking indicator, escape handling
     /// </summary>
     public class VRChatTTS : MonoBehaviour
     {
-        [Header("API Configuration")]
+        [Header("Provider")]
+        [Tooltip("ElevenLabs speaks with the narration voice. Groq Orpheus is used if ElevenLabs is unavailable.")]
+        [SerializeField] private TTSProvider provider = TTSProvider.ElevenLabs;
+        [SerializeField] private TutorVoiceProfile voiceProfile;
+
+        [Header("API Configuration (Groq fallback)")]
         [SerializeField] private string apiKey = "YOUR_GROQ_API_KEY";
         
         [Header("Voice Settings")]
@@ -80,17 +92,33 @@ namespace VRChat
         private const string MODEL = "canopylabs/orpheus-v1-english";
         private const string RESPONSE_FORMAT = "wav";
         private const int MAX_INPUT_LENGTH = 200; // Orpheus has 200 character limit
+        private const int ELEVENLABS_MAX_INPUT_LENGTH = 2000;
 
         private Queue<string> speechQueue = new Queue<string>();
         private bool isSpeaking = false;
         private bool isProcessing = false;
         private Coroutine currentSpeechCoroutine;
+        private string elevenLabsKey;
+        private bool elevenLabsDisabledForSession;
+
+        private bool HasGroqKey => !string.IsNullOrEmpty(apiKey) && apiKey != "YOUR_GROQ_API_KEY";
+        private bool UsingElevenLabs => provider == TTSProvider.ElevenLabs && !elevenLabsDisabledForSession
+                                        && voiceProfile != null && !string.IsNullOrEmpty(elevenLabsKey);
 
         #region Unity Lifecycle
 
         private void Awake()
         {
             InitializeAudioSource();
+
+            if (voiceProfile == null)
+                voiceProfile = TutorVoiceProfile.Load();
+            elevenLabsKey = ElevenLabsKey.Get();
+
+            if (provider == TTSProvider.ElevenLabs && !UsingElevenLabs)
+                Debug.LogWarning("[VRChatTTS] ElevenLabs " + (voiceProfile == null ? "voice profile" : "API key") + " missing; using the Groq voice. Add the key under Tools > Millikan > API Keys.");
+            else if (UsingElevenLabs)
+                Debug.Log("[VRChatTTS] Using ElevenLabs voice '" + voiceProfile.voiceName + "' (" + voiceProfile.liveModel + ").");
         }
 
         private void OnDestroy()
@@ -146,7 +174,7 @@ namespace VRChat
                 return;
             }
 
-            if (string.IsNullOrEmpty(apiKey) || apiKey == "YOUR_GROQ_API_KEY")
+            if (!UsingElevenLabs && !HasGroqKey)
             {
                 Debug.LogError("[VRChatTTS] API key not set!");
                 OnError?.Invoke("API key not configured");
@@ -156,8 +184,9 @@ namespace VRChat
             // Clean the text
             string cleanedText = CleanTextForTTS(text);
 
-            // Split into chunks if text exceeds Orpheus limit (200 chars)
-            List<string> chunks = SplitTextIntoChunks(cleanedText, MAX_INPUT_LENGTH);
+            // Orpheus accepts 200 characters per request; ElevenLabs takes a whole reply at once
+            int maxLength = UsingElevenLabs ? ELEVENLABS_MAX_INPUT_LENGTH : MAX_INPUT_LENGTH;
+            List<string> chunks = SplitTextIntoChunks(cleanedText, maxLength);
 
             foreach (string chunk in chunks)
             {
@@ -261,10 +290,104 @@ namespace VRChat
         private IEnumerator GenerateAndPlaySpeech(string text)
         {
             isProcessing = true;
+            OnSpeakingText?.Invoke(text);
+
+            if (UsingElevenLabs)
+            {
+                bool spoke = false;
+                yield return ElevenLabsSpeech(text, ok => spoke = ok);
+                if (spoke)
+                    yield break;
+
+                if (!HasGroqKey)
+                {
+                    isProcessing = false;
+                    OnError?.Invoke("TTS unavailable");
+                    ProcessQueue();
+                    yield break;
+                }
+
+                // Groq needs short chunks; speak the first now and queue the rest ahead of anything waiting
+                List<string> fallbackChunks = SplitTextIntoChunks(text, MAX_INPUT_LENGTH);
+                if (fallbackChunks.Count == 0)
+                {
+                    isProcessing = false;
+                    ProcessQueue();
+                    yield break;
+                }
+
+                if (fallbackChunks.Count > 1)
+                    speechQueue = new Queue<string>(fallbackChunks.Skip(1).Concat(speechQueue));
+                text = fallbackChunks[0];
+            }
+
+            yield return GroqSpeech(text);
+        }
+
+        private IEnumerator ElevenLabsSpeech(string text, Action<bool> done)
+        {
+            string language = ElevenLabsTts.LanguageCode(LanguageManager.Current);
+
+            using (UnityWebRequest request = ElevenLabsTts.CreateRequest(voiceProfile, voiceProfile.liveModel, text, language, -1, elevenLabsKey))
+            {
+                request.timeout = 30;
+                yield return request.SendWebRequest();
+
+                if (request.result != UnityWebRequest.Result.Success)
+                {
+                    string body = request.downloadHandler != null ? request.downloadHandler.text : "";
+                    string error = "ElevenLabs TTS error " + request.responseCode + ": " + request.error + " " + body;
+                    bool permanent = request.responseCode == 401 || request.responseCode == 402 || request.responseCode == 403
+                                     || body.Contains("quota");
+                    if (permanent)
+                        elevenLabsDisabledForSession = true;
+
+                    Debug.LogWarning("[VRChatTTS] " + error + (permanent ? " Using the Groq voice for the rest of this session." : " Using the Groq voice for this reply."));
+                    if (SessionLogger.Instance != null)
+                        SessionLogger.Instance.RegisterAiError(error);
+                    done(false);
+                    yield break;
+                }
+
+                AudioClip clip = null;
+                try
+                {
+                    clip = ElevenLabsTts.CreateClip(request.downloadHandler.data, voiceProfile, "TTS_Audio");
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"[VRChatTTS] ElevenLabs audio decode error: {e.Message}");
+                }
+
+                if (clip == null || audioSource == null)
+                {
+                    done(false);
+                    yield break;
+                }
+
+                isProcessing = false;
+                PlayClip(clip);
+                done(true);
+            }
+        }
+
+        private void PlayClip(AudioClip clip)
+        {
+            audioSource.clip = clip;
+            audioSource.volume = volume;
+            audioSource.Play();
+
+            isSpeaking = true;
+            OnSpeakingStarted?.Invoke();
+
+            Debug.Log($"[VRChatTTS] Playing audio ({clip.length:F1}s)");
+        }
+
+        private IEnumerator GroqSpeech(string text)
+        {
+            isProcessing = true;
             Debug.Log($"[VRChatTTS] Generating speech for: {(text.Length > 50 ? text.Substring(0, 50) + "..." : text)}");
             Debug.Log($"[VRChatTTS] API Key set: {!string.IsNullOrEmpty(apiKey) && apiKey != "YOUR_GROQ_API_KEY"}");
-
-            OnSpeakingText?.Invoke(text);
 
             // Build request JSON
             string voiceName = GetVoiceName(selectedVoice);
@@ -342,14 +465,7 @@ namespace VRChat
                     
                     if (clip != null && audioSource != null)
                     {
-                        audioSource.clip = clip;
-                        audioSource.volume = volume;
-                        audioSource.Play();
-                        
-                        isSpeaking = true;
-                        OnSpeakingStarted?.Invoke();
-                        
-                        Debug.Log($"[VRChatTTS] Playing audio ({clip.length:F1}s)");
+                        PlayClip(clip);
                     }
                     else
                     {

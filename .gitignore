@@ -101,3 +101,10 @@ InitTestScene*.unity*
 # Editor verification captures
 /[Aa]ssets/Screenshots/
 /[Aa]ssets/Screenshots.meta
+
+# ElevenLabs key is injected only while building (ElevenLabsKeyBuildStep)
+/[Aa]ssets/[Rr]esources/ElevenLabsKey.txt
+/[Aa]ssets/[Rr]esources/ElevenLabsKey.txt.meta
+
+# Narration generator: local backup of replaced clips
+/Narration/Backup/

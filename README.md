@@ -33,7 +33,7 @@ A voice-only AI tutor is available during the tutorial. It knows the current ste
 
 The tutor pauses scripted narration while you speak. Replies stay on the Millikan experiment and the current step. Jokes, news, and other subjects are refused and redirected.
 
-Scripted step audio uses German and English WAV files. The AI reply voice currently uses Groq TTS (Orpheus). German replies may sound accented.
+One voice is used everywhere: ElevenLabs "Bill", defined in `Assets/Resources/TutorVoiceProfile.asset`. Scripted step audio is pre-generated from the on-screen text with the high-quality model (`eleven_multilingual_v2`) via **Tools > Millikan > Narration Generator**; live AI replies use the same voice with the low-latency model (`eleven_flash_v2_5`). If ElevenLabs is unavailable, replies fall back to Groq TTS (Orpheus).
 
 There is no chat canvas. The tutor is voice-only.
 
@@ -42,6 +42,7 @@ There is no chat canvas. The tutor is voice-only.
 - **Unity** 6000.0.58f2
 - **Headset** Meta Quest 3 (Meta XR / OpenXR)
 - **Groq API key** on the `ExperimentAI` object in `Classroom_Low` (`VRChatSetup`)
+- **ElevenLabs API key**: paste it once under **Tools > Millikan > API Keys** (the window opens by itself when no key is set). It is saved only on your computer in `UserSettings/` (git-ignored) and added to headset builds automatically by `ElevenLabsKeyBuildStep`. The `ELEVENLABS_API_KEY` environment variable also works. Without a key, AI replies use the Groq fallback voice.
 
 Open `Assets/Scenes/Classroom_Low.unity` and press Play, or build for Android and deploy to the headset.
 
@@ -50,7 +51,10 @@ Open `Assets/Scenes/Classroom_Low.unity` and press Play, or build for Android an
 ```
 Assets/Scenes/Classroom_Low.unity     Main study scene
 Assets/Prefabs/millikan_optimized_v2.prefab
-Assets/Material/MillikanWav_en/       English step voice clips
+Assets/Material/MillikanWav/          German step voice clips (generated)
+Assets/Material/MillikanWav_en/       English step voice clips (generated)
+Assets/Resources/TutorVoiceProfile.asset  Shared voice settings (narration + live replies)
+Narration/                            Spoken script and generation manifest
 Assets/Scripts/
   Localization/                       DE/EN strings and language manager
   ExperimentAITutor.cs                Bridges tutorial state to the voice tutor
@@ -58,6 +62,7 @@ Assets/Scripts/
   PrePostQuizController.cs
   QuestionnaireController.cs
   SessionLogger.cs                    One CSV per run
+  Voice/                              ElevenLabs voice profile, key provider, TTS helpers
   VRChat/                             STT, TTS, and Groq chat
   GroqApiLibrary-master/              Groq client
 ```
