@@ -23,6 +23,7 @@ public class MillikanNarrationGenerator : EditorWindow
     private const string ManifestPath = NarrationDir + "/narration_manifest.json";
     private const string ScriptPath = NarrationDir + "/spoken_script.tsv";
     private const string BackupDir = NarrationDir + "/Backup";
+    private const string GuideClipDir = "Assets/Material/RuleBasedGuide";
 
     private TutorVoiceProfile profile;
     private string rerollSteps = "";
@@ -79,6 +80,20 @@ public class MillikanNarrationGenerator : EditorWindow
             }
         }
 
+        GUILayout.Space(8);
+        EditorGUILayout.LabelField("Rule-based guide answers (live reply model)", EditorStyles.boldLabel);
+        RuleBasedGuide guide = FindGuide();
+        if (guide == null)
+            EditorGUILayout.HelpBox("Open the classroom scene that contains the RuleBasedGuide component.", MessageType.Warning);
+
+        using (new EditorGUI.DisabledScope(busy || guide == null || profile == null || !hasKey || EditorApplication.isPlayingOrWillChangePlaymode))
+        {
+            if (GUILayout.Button("Generate new or changed answers"))
+                Run(tutorial, false, null, true, true);
+            if (GUILayout.Button("Regenerate all answers"))
+                Run(tutorial, true, null, true, true);
+        }
+
         if (!string.IsNullOrEmpty(status))
             EditorGUILayout.HelpBox(status, MessageType.None);
     }
@@ -88,14 +103,53 @@ public class MillikanNarrationGenerator : EditorWindow
     private struct Line
     {
         public int step;
+        public string guideId;
         public AppLanguage language;
         public string text;
         public string assetPath;
+
+        public bool IsGuide => !string.IsNullOrEmpty(guideId);
     }
 
     private static BottomTutorialController FindTutorial()
     {
         return UnityEngine.Object.FindFirstObjectByType<BottomTutorialController>(FindObjectsInactive.Include);
+    }
+
+    private static RuleBasedGuide FindGuide()
+    {
+        return UnityEngine.Object.FindFirstObjectByType<RuleBasedGuide>(FindObjectsInactive.Include);
+    }
+
+    private string ModelFor(Line line)
+    {
+        return line.IsGuide ? profile.liveModel : profile.narrationModel;
+    }
+
+    private static string GuideClipPath(string id, AppLanguage language)
+    {
+        return GuideClipDir + "/" + (language == AppLanguage.German ? "de" : "en") + "/" + id + ".wav";
+    }
+
+    private static List<Line> BuildGuideLines()
+    {
+        var lines = new List<Line>();
+        foreach (AppLanguage language in new[] { AppLanguage.German, AppLanguage.English })
+        {
+            foreach (RuleBasedGuideStrings.Line entry in RuleBasedGuideStrings.AllLines())
+            {
+                lines.Add(new Line
+                {
+                    step = -1,
+                    guideId = entry.id,
+                    language = language,
+                    text = language == AppLanguage.German ? entry.de : entry.en,
+                    assetPath = GuideClipPath(entry.id, language)
+                });
+            }
+        }
+
+        return lines;
     }
 
     private static List<Line> BuildLines(BottomTutorialController tutorial)
@@ -174,7 +228,7 @@ public class MillikanNarrationGenerator : EditorWindow
         get { return HasOpenInstances<MillikanNarrationGenerator>() && GetWindow<MillikanNarrationGenerator>().busy; }
     }
 
-    private async void Run(BottomTutorialController tutorial, bool force, HashSet<int> reroll, bool confirm = true)
+    private async void Run(BottomTutorialController tutorial, bool force, HashSet<int> reroll, bool confirm = true, bool guideAnswers = false)
     {
         busy = true;
         status = "";
@@ -182,7 +236,7 @@ public class MillikanNarrationGenerator : EditorWindow
         {
             if (profile == null)
                 profile = TutorVoiceProfile.Load();
-            await Generate(tutorial, force, reroll, confirm);
+            await Generate(tutorial, force, reroll, confirm, guideAnswers);
         }
         catch (Exception e)
         {
@@ -197,7 +251,7 @@ public class MillikanNarrationGenerator : EditorWindow
         }
     }
 
-    private async Task Generate(BottomTutorialController tutorial, bool force, HashSet<int> reroll, bool confirm)
+    private async Task Generate(BottomTutorialController tutorial, bool force, HashSet<int> reroll, bool confirm, bool guideAnswers)
     {
         string key = ElevenLabsKey.Get();
         if (string.IsNullOrEmpty(key))
@@ -206,7 +260,7 @@ public class MillikanNarrationGenerator : EditorWindow
         Manifest manifest = Manifest.Load();
         var jobs = new List<KeyValuePair<Line, int>>();
 
-        foreach (Line line in BuildLines(tutorial))
+        foreach (Line line in guideAnswers ? BuildGuideLines() : BuildLines(tutorial))
         {
             Manifest.Entry entry = manifest.Find(line.assetPath);
             int seed = entry != null ? entry.seed : profile.seed;
@@ -218,7 +272,7 @@ public class MillikanNarrationGenerator : EditorWindow
             if (isReroll)
                 seed++;
 
-            string hash = Hash(line.text, seed);
+            string hash = Hash(line, seed);
             if (!force && !isReroll && entry != null && entry.hash == hash && File.Exists(line.assetPath))
                 continue;
 
@@ -227,19 +281,25 @@ public class MillikanNarrationGenerator : EditorWindow
 
         if (jobs.Count == 0)
         {
+            if (guideAnswers)
+                AssignGuideClips();
             status = "Everything is up to date.";
             return;
         }
 
         int chars = jobs.Sum(j => j.Key.text.Length);
-        float creditsPerChar = profile.narrationModel.Contains("flash") || profile.narrationModel.Contains("turbo") ? 0.5f : 1f;
-        if (confirm && !EditorUtility.DisplayDialog("Generate narration",
+        string model = guideAnswers ? profile.liveModel : profile.narrationModel;
+        float creditsPerChar = model.Contains("flash") || model.Contains("turbo") ? 0.5f : 1f;
+        if (confirm && !EditorUtility.DisplayDialog(guideAnswers ? "Generate rule-based answers" : "Generate narration",
                 string.Format("{0} lines, {1} characters (~{2:0} credits on {3}).\nOriginals are backed up to {4}.",
-                    jobs.Count, chars, chars * creditsPerChar, profile.narrationModel, BackupDir),
+                    jobs.Count, chars, chars * creditsPerChar, model, BackupDir),
                 "Generate", "Cancel"))
             return;
 
         await GenerateJobs(tutorial, manifest, jobs);
+
+        if (guideAnswers)
+            AssignGuideClips();
     }
 
     private async Task GenerateJobs(BottomTutorialController tutorial, Manifest manifest, List<KeyValuePair<Line, int>> jobs)
@@ -253,7 +313,7 @@ public class MillikanNarrationGenerator : EditorWindow
         foreach (KeyValuePair<Line, int> job in jobs)
         {
             Line line = job.Key;
-            string label = string.Format("Step {0} ({1})", line.step, line.language == AppLanguage.German ? "de" : "en");
+            string label = string.Format("{0} ({1})", line.IsGuide ? line.guideId : "Step " + line.step, line.language == AppLanguage.German ? "de" : "en");
             if (EditorUtility.DisplayCancelableProgressBar("Generating narration", label + "  -  " + done + "/" + jobs.Count, done / (float)jobs.Count))
             {
                 cancelled = true;
@@ -274,7 +334,7 @@ public class MillikanNarrationGenerator : EditorWindow
             ElevenLabsTts.Normalize(samples, profile.targetRmsDb, profile.peakLimitDb);
             WriteWav(line.assetPath, samples, profile.sampleRate);
             AssetDatabase.ImportAsset(line.assetPath, ImportAssetOptions.ForceUpdate);
-            if (!existed)
+            if (!existed && !line.IsGuide)
                 created.Add(line);
 
             manifest.Set(new Manifest.Entry
@@ -284,8 +344,8 @@ public class MillikanNarrationGenerator : EditorWindow
                 language = line.language == AppLanguage.German ? "de" : "en",
                 text = line.text,
                 seed = job.Value,
-                hash = Hash(line.text, job.Value),
-                model = profile.narrationModel,
+                hash = Hash(line, job.Value),
+                model = ModelFor(line),
                 voice = profile.voiceName,
                 generatedUtc = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)
             });
@@ -308,7 +368,7 @@ public class MillikanNarrationGenerator : EditorWindow
 
         for (int attempt = 1; attempt <= 4; attempt++)
         {
-            using (UnityWebRequest request = ElevenLabsTts.CreateRequest(profile, profile.narrationModel, line.text, language, seed, key))
+            using (UnityWebRequest request = ElevenLabsTts.CreateRequest(profile, ModelFor(line), line.text, language, seed, key))
             {
                 request.timeout = 120;
                 await Send(request);
@@ -355,6 +415,34 @@ public class MillikanNarrationGenerator : EditorWindow
         EditorSceneManager.MarkSceneDirty(tutorial.gameObject.scene);
     }
 
+    /// <summary>Wire every recorded answer into the scene's RuleBasedGuide (clips are looked up by name).</summary>
+    public static int AssignGuideClips()
+    {
+        RuleBasedGuide guide = FindGuide();
+        if (guide == null)
+            return 0;
+
+        int count = 0;
+        Undo.RecordObject(guide, "Assign rule-based answers");
+        foreach (AppLanguage language in new[] { AppLanguage.German, AppLanguage.English })
+        {
+            var clips = new List<AudioClip>();
+            foreach (RuleBasedGuideStrings.Line entry in RuleBasedGuideStrings.AllLines())
+            {
+                AudioClip clip = AssetDatabase.LoadAssetAtPath<AudioClip>(GuideClipPath(entry.id, language));
+                if (clip != null)
+                    clips.Add(clip);
+            }
+
+            guide.SetClips(language, clips.ToArray());
+            count += clips.Count;
+        }
+
+        EditorUtility.SetDirty(guide);
+        EditorSceneManager.MarkSceneDirty(guide.gameObject.scene);
+        return count;
+    }
+
     // ------------------------------------------------------------------ files
 
     private static void Backup(string assetPath)
@@ -395,11 +483,11 @@ public class MillikanNarrationGenerator : EditorWindow
         }
     }
 
-    private string Hash(string text, int seed)
+    private string Hash(Line line, int seed)
     {
         string settings = string.Join("|", new[]
         {
-            text, seed.ToString(CultureInfo.InvariantCulture), profile.voiceId, profile.narrationModel,
+            line.text, seed.ToString(CultureInfo.InvariantCulture), profile.voiceId, ModelFor(line),
             profile.stability.ToString(CultureInfo.InvariantCulture), profile.similarityBoost.ToString(CultureInfo.InvariantCulture),
             profile.style.ToString(CultureInfo.InvariantCulture), profile.useSpeakerBoost ? "1" : "0",
             profile.speed.ToString(CultureInfo.InvariantCulture), profile.sampleRate.ToString(CultureInfo.InvariantCulture),

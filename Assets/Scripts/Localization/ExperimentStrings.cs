@@ -270,11 +270,11 @@ public static class ExperimentStrings
     public static string ChoiceNo => Pick("Nein", "No");
     public static string ChoiceRepeat => Pick("Wiederholen", "Repeat");
 
-    public static string AiIdle => Pick("Y halten: KI fragen", "Hold Y: ask AI");
-    public static string AiListening => Pick("KI hört zu…", "AI is listening…");
-    public static string AiThinking => Pick("KI denkt nach…", "AI is thinking…");
-    public static string AiSpeaking => Pick("KI spricht…", "AI is speaking…");
-    public static string AiUnavailable => Pick("KI nicht verfügbar (Kontingent). Tutorial weiter nutzen.", "AI unavailable (quota). Continue the tutorial.");
+    public static string AiIdle => Pick("Y halten: Millikan fragen", "Hold Y: ask Millikan");
+    public static string AiListening => Pick("Millikan hört zu…", "Millikan is listening…");
+    public static string AiThinking => Pick("Millikan denkt nach…", "Millikan is thinking…");
+    public static string AiSpeaking => Pick("Millikan spricht…", "Millikan is speaking…");
+    public static string AiUnavailable => Pick("Fragen sind gerade nicht möglich. Tutorial weiter nutzen.", "Questions are unavailable right now. Continue the tutorial.");
 
     public static string HelpDeclined => Pick(
         "Ich kann den Versuch nicht allein durchführen.\nWenn du bereit bist, drücke Ja.",
@@ -292,7 +292,7 @@ public static class ExperimentStrings
 
     public static string ButtonHint(int step, bool isSkip, bool isBlocking, bool radiusIncomplete)
     {
-        string aiHint = Pick("Y halten: KI fragen", "Hold Y: ask AI");
+        string aiHint = AiIdle;
         string repeatHint = Pick("X: Wiederholen", "X: Repeat");
         string hint;
 

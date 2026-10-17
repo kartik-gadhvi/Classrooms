@@ -60,6 +60,7 @@ namespace VRChat
         private VRChatController chatController;
         private VRChatTTS ttsManager;
         private VRSpeechToText sttManager;
+        private bool llmEnabled = true;
 
         private void Awake()
         {
@@ -423,9 +424,14 @@ namespace VRChat
         /// <summary>
         /// Send a message directly (useful for voice-to-text integration)
         /// </summary>
+        public void SetLlmEnabled(bool enabled)
+        {
+            llmEnabled = enabled;
+        }
+
         public void SendVoiceMessage(string message)
         {
-            if (chatController != null && !string.IsNullOrWhiteSpace(message))
+            if (llmEnabled && chatController != null && !string.IsNullOrWhiteSpace(message))
             {
                 chatController.SendMessage(message);
             }

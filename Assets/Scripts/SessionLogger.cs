@@ -4,6 +4,21 @@ using System.IO;
 using System.Text;
 using UnityEngine;
 
+/// <summary>One question to the guide and its answer; written as a row of the dialogue CSV.</summary>
+public class GuideExchange
+{
+    public string time = DateTime.Now.ToString("HH:mm:ss");
+    public int step = -1;
+    public string phase = "";
+    public string transcript = "";
+    public string response = "";
+    public string source = "";
+    public int sttMs = -1;
+    public int responseMs = -1;
+    public int audioMs = -1;
+    public string error = "";
+}
+
 /// <summary>
 /// Zentrales Logging f�r einen Studien-Durchlauf.
 /// Schreibt EINE CSV-Datei mit fester Kopfzeile und genau einer Datenzeile.
@@ -43,8 +58,12 @@ public class SessionLogger : MonoBehaviour
     private const char LISTSEP = '|';    // Trenner innerhalb einer Zelle
 
     private string filePath;
+    private string dialoguePath;
     private string sessionStart;
     private string appName;
+    private string condition = "";
+    private int guideExchangeCount;
+    private int guideNoMatchCount;
 
     // Caches (�berleben auch, falls eine Referenz beim Szenenwechsel null wird)
     private readonly List<string> questionnaireIds = new List<string>();
@@ -80,10 +99,15 @@ public class SessionLogger : MonoBehaviour
         appName = string.IsNullOrEmpty(appNameOverride) ? Application.productName : appNameOverride;
         appName = Sanitize(appName);
 
+        ExperimentAITutor guide = FindFirstObjectByType<ExperimentAITutor>();
+        if (guide != null)
+            condition = guide.Condition.ToString();
+
         sessionStart = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
         string stamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-        string fileName = appName + "_" + stamp + ".csv";
-        filePath = Path.Combine(Application.persistentDataPath, fileName);
+        string baseName = appName + FilePart(participantId) + FilePart(condition) + "_" + stamp;
+        filePath = Path.Combine(Application.persistentDataPath, baseName + ".csv");
+        dialoguePath = Path.Combine(Application.persistentDataPath, baseName + "_dialogue.csv");
 
         if (prePostQuiz != null)
             questionCount = prePostQuiz.QuestionCount;
@@ -167,6 +191,45 @@ public class SessionLogger : MonoBehaviour
     {
         aiQuotaExceeded = true;
         RegisterAiError(error);
+    }
+
+    public void LogGuideExchange(GuideExchange exchange)
+    {
+        if (exchange == null)
+            return;
+
+        guideExchangeCount++;
+        if (exchange.source == "rule:" + RuleBasedGuideStrings.NoMatchId)
+            guideNoMatchCount++;
+
+        var header = new StringBuilder();
+        var row = new StringBuilder();
+        AddField(header, row, "Time", exchange.time);
+        AddField(header, row, "ParticipantId", participantId);
+        AddField(header, row, "Condition", condition);
+        AddField(header, row, "Language", LanguageManager.IsEnglish ? "en" : "de");
+        AddField(header, row, "Step", exchange.step >= 0 ? exchange.step.ToString() : "");
+        AddField(header, row, "Phase", exchange.phase);
+        AddField(header, row, "Transcript", exchange.transcript);
+        AddField(header, row, "Response", exchange.response);
+        AddField(header, row, "Source", exchange.source);
+        AddField(header, row, "SpeechToTextMs", exchange.sttMs >= 0 ? exchange.sttMs.ToString() : "");
+        AddField(header, row, "ResponseMs", exchange.responseMs >= 0 ? exchange.responseMs.ToString() : "");
+        AddField(header, row, "ReleaseToAudioMs", exchange.audioMs >= 0 ? exchange.audioMs.ToString() : "");
+        AddField(header, row, "Error", exchange.error);
+
+        try
+        {
+            if (!File.Exists(dialoguePath))
+                File.WriteAllText(dialoguePath, header + "\n", new UTF8Encoding(true));
+            File.AppendAllText(dialoguePath, row + "\n", new UTF8Encoding(false));
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[SessionLogger] Dialog-Log fehlgeschlagen: " + e.Message);
+        }
+
+        WriteToDisk();
     }
 
     /// <summary>Erzwingt ein Schreiben (z. B. am Ende der Studie).</summary>
@@ -264,6 +327,7 @@ public class SessionLogger : MonoBehaviour
         StringBuilder row = new StringBuilder();
 
         AddField(header, row, "ParticipantId", participantId);
+        AddField(header, row, "Condition", condition);
         AddField(header, row, "AppName", appName);
         AddField(header, row, "SessionStart", sessionStart);
         AddField(header, row, "Language", string.IsNullOrEmpty(languageCode)
@@ -316,6 +380,8 @@ public class SessionLogger : MonoBehaviour
         AddField(header, row, "AI_ErrorCount", aiErrorCount.ToString());
         AddField(header, row, "AI_QuotaExceeded", aiQuotaExceeded ? "true" : "false");
         AddField(header, row, "AI_LastError", aiLastError);
+        AddField(header, row, "Guide_Exchanges", guideExchangeCount.ToString());
+        AddField(header, row, "Guide_RuleNoMatch", guideNoMatchCount.ToString());
 
         try
         {
@@ -339,6 +405,16 @@ public class SessionLogger : MonoBehaviour
         if (string.IsNullOrEmpty(v))
             v = nullToken;
         row.Append(v);
+    }
+
+    private static string FilePart(string s)
+    {
+        if (string.IsNullOrWhiteSpace(s))
+            return "";
+
+        foreach (char c in Path.GetInvalidFileNameChars())
+            s = s.Replace(c, '-');
+        return "_" + s.Trim().Replace(' ', '-');
     }
 
     private string Sanitize(string s)

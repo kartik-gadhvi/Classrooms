@@ -69,6 +69,9 @@ namespace VRChat
         public bool IsProcessing => isProcessing;
         public bool ListeningEnabled => listeningEnabled;
 
+        /// <summary>Loudness of the voice being recorded right now, from 0 (silence) to 1.</summary>
+        public float CurrentLevel => SampleLevel();
+
         private const string WHISPER_API_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
         private const string WHISPER_MODEL = "whisper-large-v3-turbo";
 
@@ -76,11 +79,13 @@ namespace VRChat
         private bool isRecording = false;
         private bool isProcessing = false;
         private float recordingStartTime;
+        private int recordingStartSample;
         private string microphoneDevice;
         
         // OVRInput state tracking
         private bool wasGripPressed = false;
         private bool listeningEnabled = true;
+        private readonly float[] levelSamples = new float[512];
 
         // Reference to chat system
         private VRChatSetup chatSetup;
@@ -126,6 +131,9 @@ namespace VRChat
             {
                 Debug.Log($"[VRSpeechToText] SELECTED microphone: {microphoneDevice}");
             }
+
+            // Microphone.Start/End block the main thread for about a second on Windows, so the device stays open for the whole session
+            EnsureMicrophoneRunning();
 
             // Setup input action
             SetupInputAction();
@@ -174,6 +182,9 @@ namespace VRChat
 
         void Update()
         {
+            if (isRecording && Time.time - recordingStartTime >= maxRecordingSeconds)
+                StopRecordingAndProcess();
+
             if (useOVRInput)
             {
                 UpdateOVRInput();
@@ -253,11 +264,15 @@ namespace VRChat
                 return;
             }
 
+            if (!EnsureMicrophoneRunning())
+            {
+                OnError?.Invoke("Microphone could not be started");
+                return;
+            }
+
             isRecording = true;
             recordingStartTime = Time.time;
-
-            // Start microphone recording
-            recordingClip = Microphone.Start(microphoneDevice, false, maxRecordingSeconds, sampleRate);
+            recordingStartSample = Microphone.GetPosition(microphoneDevice);
 
             // Visual/audio feedback
             if (recordingIndicator != null) SetRecordingVisual(true);
@@ -297,13 +312,13 @@ namespace VRChat
                 {
                     Debug.Log($"[VRSpeechToText] Recording too short ({recordingDuration:F1}s), ignoring.");
                 }
-                Microphone.End(microphoneDevice);
                 return;
             }
 
-            // Get recording position and stop
-            int recordingLength = Microphone.GetPosition(microphoneDevice);
-            Microphone.End(microphoneDevice);
+            int clipSamples = recordingClip != null ? recordingClip.samples : 0;
+            int recordingLength = clipSamples > 0
+                ? (Microphone.GetPosition(microphoneDevice) - recordingStartSample + clipSamples) % clipSamples
+                : 0;
 
             if (recordingLength <= 0)
             {
@@ -317,15 +332,13 @@ namespace VRChat
                 Debug.Log($"[VRSpeechToText] Recording stopped. Duration: {recordingDuration:F1}s, Samples: {recordingLength}");
             }
 
-            // Extract audio data
             float[] audioData = new float[recordingLength];
-            recordingClip.GetData(audioData, 0);
+            recordingClip.GetData(audioData, recordingStartSample);
 
-            // Process in background
-            StartCoroutine(ProcessRecording(audioData, recordingLength));
+            StartCoroutine(ProcessRecording(audioData, recordingLength, recordingClip.frequency));
         }
 
-        private IEnumerator ProcessRecording(float[] audioData, int sampleCount)
+        private IEnumerator ProcessRecording(float[] audioData, int sampleCount, int clipSampleRate)
         {
             isProcessing = true;
 
@@ -335,7 +348,7 @@ namespace VRChat
             }
 
             // Convert to WAV bytes
-            byte[] wavData = ConvertToWav(audioData, sampleCount, sampleRate);
+            byte[] wavData = ConvertToWav(audioData, sampleCount, clipSampleRate);
 
             Debug.Log($"[VRSpeechToText] Sending {wavData.Length} bytes to Whisper API...");
 
@@ -451,7 +464,8 @@ namespace VRChat
             {
                 float sample = Mathf.Clamp(audioData[i], -1f, 1f);
                 short pcmSample = (short)(sample * 32767f);
-                BitConverter.GetBytes(pcmSample).CopyTo(wav, offset);
+                wav[offset] = (byte)pcmSample;
+                wav[offset + 1] = (byte)(pcmSample >> 8);
                 offset += 2;
             }
 
@@ -497,10 +511,50 @@ namespace VRChat
             if (recordingIndicator != null)
                 SetRecordingVisual(false);
 
-            if (!string.IsNullOrEmpty(microphoneDevice))
-                Microphone.End(microphoneDevice);
-
             OnRecordingStopped?.Invoke();
+        }
+
+        private float SampleLevel()
+        {
+            if (!isRecording || recordingClip == null || string.IsNullOrEmpty(microphoneDevice))
+                return 0f;
+            if (!Microphone.IsRecording(microphoneDevice))
+                return 0f;
+
+            int channels = Mathf.Max(1, recordingClip.channels);
+            int window = levelSamples.Length / channels;
+            int position = Microphone.GetPosition(microphoneDevice);
+            if (position < window)
+                return 0f;
+
+            if (!recordingClip.GetData(levelSamples, position - window))
+                return 0f;
+
+            double sum = 0;
+            int count = window * channels;
+            for (int i = 0; i < count; i++)
+                sum += levelSamples[i] * levelSamples[i];
+
+            return Mathf.Clamp01((float)System.Math.Sqrt(sum / count) * 14f);
+        }
+
+        private bool EnsureMicrophoneRunning()
+        {
+            if (string.IsNullOrEmpty(microphoneDevice))
+                return false;
+
+            if (recordingClip != null && Microphone.IsRecording(microphoneDevice))
+                return true;
+
+            recordingClip = Microphone.Start(microphoneDevice, true, maxRecordingSeconds + 1, sampleRate);
+            return recordingClip != null;
+        }
+
+        private void StopMicrophone()
+        {
+            if (!string.IsNullOrEmpty(microphoneDevice) && Microphone.IsRecording(microphoneDevice))
+                Microphone.End(microphoneDevice);
+            recordingClip = null;
         }
 
         /// <summary>
@@ -595,7 +649,10 @@ namespace VRChat
         {
             if (System.Array.IndexOf(Microphone.devices, deviceName) >= 0)
             {
+                CancelRecording();
+                StopMicrophone();
                 microphoneDevice = deviceName;
+                EnsureMicrophoneRunning();
                 Debug.Log($"[VRSpeechToText] Microphone changed to: {deviceName}");
             }
             else
@@ -612,10 +669,7 @@ namespace VRChat
                 gripAction.action.canceled -= OnGripReleased;
             }
 
-            if (isRecording)
-            {
-                Microphone.End(microphoneDevice);
-            }
+            StopMicrophone();
         }
 
         [Serializable]

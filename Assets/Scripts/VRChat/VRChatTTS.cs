@@ -215,6 +215,17 @@ namespace VRChat
             }
         }
 
+        public void PlayPrerecorded(AudioClip clip)
+        {
+            if (clip == null || audioSource == null)
+                return;
+
+            if (isSpeaking || isProcessing)
+                Stop();
+
+            PlayClip(clip);
+        }
+
         /// <summary>
         /// Speak text as a coroutine (useful for waiting until done)
         /// </summary>

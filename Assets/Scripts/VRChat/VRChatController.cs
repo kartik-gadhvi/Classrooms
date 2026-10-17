@@ -53,6 +53,7 @@ namespace VRChat
         public System.Action<int, int, int> OnTokenUsage;
 
         public bool IsProcessing => isProcessing;
+        public string Model => model;
         public bool QuotaExceeded { get; private set; }
         public int SessionPromptTokens { get; private set; }
         public int SessionCompletionTokens { get; private set; }
