@@ -2,7 +2,7 @@
 
 VR Millikan oil-drop experiment with a bilingual AI voice tutor.
 
-This Unity project is the implementation for Kartik Gadhvi’s master’s thesis:
+This Unity project is the implementation for Kartik Suru’s master’s thesis:
 
 **Use of an AI-based virtual guide to support physics experiments in VR learning applications**
 
@@ -77,5 +77,5 @@ The planned comparison keeps avatar, scene, and content constant and changes onl
 
 ## Author
 
-Kartik Gadhvi  
+Kartik Suru  
 Master’s thesis project, VR physics learning
